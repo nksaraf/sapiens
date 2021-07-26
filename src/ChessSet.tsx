@@ -29,13 +29,16 @@ type GLTFResult = GLTF & {
   };
 };
 
-export default function ChessSet(props: JSX.IntrinsicElements["group"]) {
-  const group = useRef<THREE.Group>();
+export default React.forwardRef(function ChessSet(
+  props: JSX.IntrinsicElements["group"],
+  ref: any
+) {
+  // const group = useRef<THREE.Group>();
   const { nodes, materials } = useGLTF(
     "/low_poly_chess_set/scene.gltf"
   ) as GLTFResult;
   return (
-    <group ref={group} {...props} dispose={null}>
+    <group ref={ref} {...props} dispose={null}>
       <group name="OSG_Scene">
         <group
           name="RootNode_(gltf_orientation_matrix)"
@@ -83,6 +86,6 @@ export default function ChessSet(props: JSX.IntrinsicElements["group"]) {
       </group>
     </group>
   );
-}
+});
 
 useGLTF.preload("/low_poly_chess_set/scene.gltf");

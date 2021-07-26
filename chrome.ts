@@ -1,15 +1,15 @@
 
 import { firefox } from 'playwright';
-import { Chess, WHITE } from './chess'
-import stockfish from 'stockfish';
+import { Chess, WHITE } from './lib/chess'
+// import stockfish from 'stockfish';
 
-let fish = stockfish();
-fish.onmessage = function (event) {
-  //NOTE: Web Workers wrap the response in an object.
-  console.log(event.data ? event.data : event);
-};
+// let fish = stockfish();
+// fish.onmessage = function (event) {
+//   //NOTE: Web Workers wrap the response in an object.
+//   console.log(event.data ? event.data : event);
+// };
 
-console.log(fish);
+// console.log(fish);
 
 
 (async () => {

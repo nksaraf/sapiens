@@ -52,26 +52,29 @@ export function isDigit(c: string): boolean {
 }
 
 const FEN_PIECE_ASCII = {
-  K: "♔",
-  Q: "♕",
-  R: "♖",
-  B: "♗",
-  N: "♘",
-  P: "♙",
-  k: "♚",
-  q: "♛",
-  r: "♜",
-  b: "♝",
-  n: "♞",
-  p: "♟"
-};
+  [WHITE]: {
+    k: "♔",
+    q: "♕",
+    r: "♖",
+    b: "♗",
+    n: "♘",
+    p: "♙",
+  }, [BLACK]: {
+    k: "♚",
+    q: "♛",
+    r: "♜",
+    b: "♝",
+    n: "♞",
+    p: "♟"
+  }
+} as const;
 
 /**
  * Returns the ASCII symbol for each piece.  White pieces are in uppercase,
  * black in lowercase.
  */
 export function symbol({ type, color }: Piece): string {
-  return FEN_PIECE_ASCII[color === WHITE ? type.toUpperCase() : type.toLowerCase()]
+  return FEN_PIECE_ASCII[color][type]
 }
 
 export function isColor(color: string): color is Color {
