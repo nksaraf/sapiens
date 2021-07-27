@@ -10,9 +10,13 @@ import {
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import React, { Suspense, useRef } from "react";
 import { useControls } from "leva";
-import Piece from "./Piece";
+import { Piece } from "./Piece";
 import { algebraic, Chess, file, rank, SQUARES } from "@/chess";
+import type { Square as SquareType } from "@/chess";
 import { DirectionalLightHelper, GridHelper } from "three";
+import { useStore } from "./store";
+import { Toaster } from "react-hot-toast";
+import { useHover } from "./useHover";
 
 function Camera() {
   const props = useControls("camera", {
@@ -43,8 +47,6 @@ function Controls() {
   return props.enabled ? <OrbitControls makeDefault /> : null;
 }
 
-const chess = new Chess();
-
 const pieceMap = {
   p: "Pawn",
   r: "Rook",
@@ -66,59 +68,43 @@ function Board() {
     xSquareSize: { value: 2.5, step: 0.1 },
     ySquareSize: { value: 2.5, step: 0.1 },
   });
+  const game = useStore((s) => s.game);
+
   return (
     <>
-      {
-        Object.keys(SQUARES).map((square) => {
-          let index = SQUARES[square];
-          let y = rank(index);
-          let x = file(index);
-          console.log(x, y, index, algebraic(index), chess.squareColor(square));
+      {Object.keys(SQUARES).map((square) => {
+        let index = SQUARES[square as SquareType];
+        let y = rank(index);
+        let x = file(index);
 
-          const piece = chess.get(square);
-          return (
-            <>
-              <Square
-                key={index}
-                square={algebraic(index)}
+        const piece = game.get(square);
+        return (
+          <>
+            <Square
+              key={index}
+              square={algebraic(index)}
+              position={[
+                x * props.xSquareSize + props.xOffset,
+                -1,
+                y * props.ySquareSize + props.yOffset,
+              ]}
+            />
+            {piece && (
+              <Piece
                 position={[
                   x * props.xSquareSize + props.xOffset,
-                  -1,
+                  0,
                   y * props.ySquareSize + props.yOffset,
                 ]}
+                square={square as SquareType}
+                key={piece.color + piece.type + index}
+                piece={pieceMap[piece.type]}
+                color={colorMap[piece.color]}
               />
-              {piece && (
-                <Piece
-                  position={[
-                    x * props.xSquareSize + props.xOffset,
-                    0,
-                    y * props.ySquareSize + props.yOffset,
-                  ]}
-                  key={piece.color + piece.type + index}
-                  piece={pieceMap[piece.type]}
-                  color={colorMap[piece.color]}
-                />
-              )}
-            </>
-          );
-        })
-        // }
-
-        // return (
-        //   <>
-        //     {/* <Piece
-        //     position={[
-        //       x * props.xSquareSize + props.xSquareSize / 2 + props.xOffset,
-        //       0,
-        //       y * props.ySquareSize + props.ySquareSize / 2 + props.yOffset,
-        //     ]}
-        //     key={piece.color + piece.type + index}
-        //     piece={pieceMap[piece.type]}
-        //     color={colorMap[piece.color]}
-        //   /> */}
-
-        // );
-      }
+            )}
+          </>
+        );
+      })}
     </>
   );
 }
@@ -129,12 +115,38 @@ function Square({ position, square }: { square: string; position: any }) {
     height: { value: 2.5, step: 0.1 },
   });
 
-  const squareColor = chess.squareColor(square);
+  const game = useStore((s) => s.game);
+  const selectedSquare = useStore((s) => s.selectedSquare);
+
+  const squareColor = game.squareColor(square);
+
+  const isSelected = selectedSquare === square;
+  const isMovable = selectedSquare
+    ? game
+        .moves({ square: selectedSquare })
+        .some((m) => game.move(m, { dry_run: true })?.to === square)
+    : false;
+
+  const [isHovered, bind] = useHover();
+
+  console.log(isMovable);
 
   return (
-    <mesh receiveShadow position={position} castShadow>
+    <mesh {...bind} receiveShadow position={position} castShadow>
       <boxBufferGeometry args={[props.width, 2, props.height]} />
-      <meshLambertMaterial color={squareColor == "light" ? "white" : "black"} />
+      <meshLambertMaterial
+        color={
+          isHovered
+            ? "red"
+            : isSelected
+            ? "gold"
+            : isMovable
+            ? "blue"
+            : squareColor == "light"
+            ? "white"
+            : "black"
+        }
+      />
     </mesh>
   );
 }
@@ -174,9 +186,9 @@ function Light() {
 }
 
 export function App() {
-  let radius = 10;
   return (
     <div className="h-screen w-screen">
+      <Toaster />
       <Canvas shadows>
         <color attach="background" args={["black"]} />
         <Camera />
@@ -188,14 +200,6 @@ export function App() {
           <Board />
           <Environment path="/hdri/" preset="city" />
         </Suspense>
-        {/* <ContactShadows
-          rotation-x={Math.PI / 2}
-          opacity={0.5}
-          width={radius * 2}
-          height={radius * 2}
-          blur={2}
-          far={radius / 2}
-        /> */}
         <Plane
           receiveShadow
           args={[40, 40]}

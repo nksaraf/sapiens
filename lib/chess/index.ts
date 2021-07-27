@@ -1,5 +1,5 @@
 export { Chess } from './chess'
-// export { Color, FenComment, Move, PartialMove, Piece, PieceSymbol, Validation, State } from './types'
+export type { Square } from './types'
 export {
     WHITE,
     BLACK,
