@@ -2,21 +2,26 @@ import {
   Box,
   ContactShadows,
   Environment,
+  Html,
   OrbitControls,
   PerspectiveCamera,
   Plane,
+  Sky,
   useHelper,
 } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import React, { Suspense, useRef } from "react";
+import React, { Suspense, useDebugValue, useRef } from "react";
 import { useControls } from "leva";
 import { Piece } from "./Piece";
-import { algebraic, Chess, file, rank, SQUARES } from "@/chess";
-import type { Square as SquareType } from "@/chess";
+import { algebraic, file, rank, SQUARES } from "src/lib/chess";
+import type { Square as SquareType } from "src/lib/chess";
 import { DirectionalLightHelper, GridHelper } from "three";
-import { useStore } from "./store";
 import { Toaster } from "react-hot-toast";
-import { useHover } from "./useHover";
+import { Provider, useAtom } from "jotai";
+import { $ } from "src/atoms";
+import { getPiece } from "@/chess/state";
+import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
+import { Square } from "./Square";
 
 function Camera() {
   const props = useControls("camera", {
@@ -61,93 +66,56 @@ const colorMap = {
   w: "white",
 } as const;
 
-function Board() {
+function BoardSquare({ index, square }: { index: number; square: SquareType }) {
   const props = useControls("board", {
     xOffset: { value: -9, step: 1 },
     yOffset: { value: -10, step: 1 },
     xSquareSize: { value: 2.5, step: 0.1 },
     ySquareSize: { value: 2.5, step: 0.1 },
   });
-  const game = useStore((s) => s.game);
 
+  let y = rank(index);
+  let x = file(index);
+
+  const piece = useAtomValue($.piece(square));
   return (
     <>
-      {Object.keys(SQUARES).map((square) => {
-        let index = SQUARES[square as SquareType];
-        let y = rank(index);
-        let x = file(index);
-
-        const piece = game.get(square);
-        return (
-          <>
-            <Square
-              key={index}
-              square={algebraic(index)}
-              position={[
-                x * props.xSquareSize + props.xOffset,
-                -1,
-                y * props.ySquareSize + props.yOffset,
-              ]}
-            />
-            {piece && (
-              <Piece
-                position={[
-                  x * props.xSquareSize + props.xOffset,
-                  0,
-                  y * props.ySquareSize + props.yOffset,
-                ]}
-                square={square as SquareType}
-                key={piece.color + piece.type + index}
-                piece={pieceMap[piece.type]}
-                color={colorMap[piece.color]}
-              />
-            )}
-          </>
-        );
-      })}
+      <Square
+        key={index}
+        square={algebraic(index)}
+        position={[
+          x * props.xSquareSize + props.xOffset,
+          -1,
+          y * props.ySquareSize + props.yOffset,
+        ]}
+      />
+      {piece && (
+        <Piece
+          position={[
+            x * props.xSquareSize + props.xOffset,
+            0,
+            y * props.ySquareSize + props.yOffset,
+          ]}
+          square={square as SquareType}
+          key={piece.color + piece.type + index}
+          piece={pieceMap[piece.type]}
+          color={piece.color}
+        />
+      )}
     </>
   );
 }
 
-function Square({ position, square }: { square: string; position: any }) {
-  const props = useControls("square", {
-    width: { value: 2.5, step: 0.1 },
-    height: { value: 2.5, step: 0.1 },
-  });
-
-  const game = useStore((s) => s.game);
-  const selectedSquare = useStore((s) => s.selectedSquare);
-
-  const squareColor = game.squareColor(square);
-
-  const isSelected = selectedSquare === square;
-  const isMovable = selectedSquare
-    ? game
-        .moves({ square: selectedSquare })
-        .some((m) => game.move(m, { dry_run: true })?.to === square)
-    : false;
-
-  const [isHovered, bind] = useHover();
-
-  console.log(isMovable);
-
+function Board() {
   return (
-    <mesh {...bind} receiveShadow position={position} castShadow>
-      <boxBufferGeometry args={[props.width, 2, props.height]} />
-      <meshLambertMaterial
-        color={
-          isHovered
-            ? "red"
-            : isSelected
-            ? "gold"
-            : isMovable
-            ? "blue"
-            : squareColor == "light"
-            ? "white"
-            : "black"
-        }
-      />
-    </mesh>
+    <>
+      {Object.keys(SQUARES).map((square) => (
+        <BoardSquare
+          index={SQUARES[square as SquareType]}
+          square={square as SquareType}
+        />
+      ))}
+    </>
   );
 }
 
@@ -185,28 +153,51 @@ function Light() {
   );
 }
 
+function UI() {
+  return (
+    <Html position={[-30, 0, 0]}>
+      <div>Turn: {useAtomValue($.turn)} </div>
+    </Html>
+  );
+}
+
 export function App() {
   return (
-    <div className="h-screen w-screen">
-      <Toaster />
-      <Canvas shadows>
-        <color attach="background" args={["black"]} />
-        <Camera />
-        <Controls />
-        {/* <gridHelper /> */}
-        <Suspense fallback={<Box />}>
-          <Light />
-          {/* <CenterPiece /> */}
-          <Board />
-          <Environment path="/hdri/" preset="city" />
-        </Suspense>
-        <Plane
-          receiveShadow
-          args={[40, 40]}
-          position={[0, -2, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        />
-      </Canvas>
-    </div>
+    <Provider>
+      <div className="h-screen w-screen">
+        <Toaster />
+        <Canvas shadows>
+          <color attach="background" args={["black"]} />
+          <Camera />
+          <UI />
+          <Controls />
+          {/* <gridHelper /> */}
+          <Suspense fallback={<Box />}>
+            <Light />
+            {/* <CenterPiece /> */}
+            <Board />
+            {/* <Environment path="/hdri/" preset="city" /> */}
+          </Suspense>
+          {/* <Plane
+            receiveShadow
+            args={[200, 200]}
+            position={[0, -2, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          /> */}
+          <Sky
+            distance={4500}
+            sunPosition={[0, 20, -200]}
+            inclination={0}
+            azimuth={0.25}
+          />
+          <Debugger />
+        </Canvas>
+      </div>
+    </Provider>
   );
+}
+
+function Debugger() {
+  console.log({ hoveredSquare: useAtomValue($.hoveredSquare) });
+  return null;
 }

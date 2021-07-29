@@ -36,7 +36,9 @@ import {
   Square,
   State,
   PartialMove,
+  PieceSymbol,
 } from './types'
+
 import {
   algebraic,
   file,
@@ -168,7 +170,7 @@ export function loadFen(fen: string): State | null {
     return null
   }
 
-  let state = new State()
+  let state = createState()
 
   for (let i = 0; i < position.length; i++) {
     const piece = position.charAt(i)
@@ -211,7 +213,7 @@ export function loadFen(fen: string): State | null {
   state.half_moves = parseInt(tokens[4], 10)
   state.move_number = parseInt(tokens[5], 10)
 
-  return state
+  return { ...state } as any
 }
 
 export function getPgn(
@@ -246,7 +248,7 @@ export function getPgn(
   }
 
   const appendComment = (moveStr: string): string => {
-    const comment = comments[state.fen]
+    const comment = comments[getFen(state)]
     if (typeof comment !== 'undefined') {
       const delimiter = moveStr.length > 0 ? ' ' : ''
       moveStr = `${moveStr}${delimiter}{${comment}}`
@@ -519,7 +521,7 @@ export function loadPgn(
     const token = tokens[half_move]
     const comment = decodeComment(token)
     if (comment !== undefined) {
-      comments[state.fen] = comment
+      comments[getFen(state)] = comment
       continue
     }
 
@@ -572,6 +574,30 @@ export function cloneMove(move: HexMove): HexMove {
   }
 }
 
+export function createState(): State {
+  return {
+    board: new Array(128),
+    kings: { w: EMPTY, b: EMPTY },
+    turn: WHITE,
+    castling: { w: 0, b: 0 },
+    ep_square: EMPTY,
+    half_moves: 0,
+    move_number: 1
+  }
+}
+
+export function cloneState(state: State): State {
+  return {
+    kings: { ...state.kings },
+    board: state.board.slice(),
+    castling: { ...state.castling },
+    ep_square: state.ep_square,
+    half_moves: state.half_moves,
+    move_number: state.move_number,
+    turn: state.turn,
+  }
+}
+
 export function clonePiece(piece: Piece): Piece {
   return {
     color: piece.color,
@@ -599,7 +625,7 @@ export function putPiece(
     return null
   }
 
-  const state = prevState.clone()
+  const state = cloneState(prevState)
   /* don't let the user place more than one king */
   const sq = SQUARES[square]
   if (type === KING &&
@@ -626,7 +652,7 @@ export function removePiece(prevState: State, square?: string): State | null {
   const piece = prevState.board[sq]
   if (!piece) return null
 
-  const state = prevState.clone()
+  const state = cloneState(prevState)
   const { type, color } = piece
   if (type === KING) {
     state.kings[color] = EMPTY
@@ -1037,7 +1063,7 @@ export function insufficientMaterial(state: State): boolean {
 }
 
 export function makeMove(prevState: State, move: HexMove): State {
-  const state = prevState.clone()
+  const state = cloneState(prevState)
   const us = state.turn
   const them = swapColor(us)
   // this.push(move)
@@ -1134,7 +1160,7 @@ export function makeMove(prevState: State, move: HexMove): State {
   return state
 }
 
-export function buildMove(state: State, from: number, to: number, flags: number, promotion?: string): HexMove {
+export function buildMove(state: State, from: number, to: number, flags: number, promotion?: PieceSymbol): HexMove {
   const move: HexMove = {
     color: state.turn,
     from: from,

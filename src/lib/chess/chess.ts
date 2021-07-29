@@ -17,6 +17,9 @@ import {
   ascii,
   getBoard,
   validateMove,
+  createState,
+  cloneState,
+  getFen,
 } from './state'
 import {
   Color,
@@ -73,7 +76,7 @@ export class Chess {
    * ```
    */
   constructor(fen: string = DEFAULT_POSITION) {
-    this._state = new State()
+    this._state = createState()
     this._history = []
     this._header = {}
     this._comments = {}
@@ -85,12 +88,12 @@ export class Chess {
 
   /** @internal */
   public get state(): State {
-    return this._state.clone()
+    return cloneState(this._state)
   }
 
   /** @internal **/
   public get states(): State[] {
-    return [...this._history.map((gameHistory) => gameHistory.state.clone()), this.state]
+    return [...this._history.map((gameHistory) => cloneState(gameHistory.state)), this.state]
   }
 
   /**
@@ -126,7 +129,7 @@ export class Chess {
    * @param keepHeaders - Flag to keep headers
    */
   public clear(keepHeaders = false): void {
-    this._state = new State()
+    this._state = createState()
     this._history = []
     if (!keepHeaders) this._header = {}
     this._comments = {}
@@ -282,7 +285,7 @@ export class Chess {
    */
   public moves(options: { square?: string, verbose: true }): Move[]
 
-  public moves(options: { square?: string, verbose?: boolean} = {}): string[] | Move[] {
+  public moves(options: { square?: string, verbose?: boolean } = {}): string[] | Move[] {
     // The internal representation of a chess move is in 0x88 format, and
     // not meant to be human-readable.  The code below converts the 0x88
     // square coordinates to algebraic coordinates.  It also prunes an
@@ -313,7 +316,7 @@ export class Chess {
    * ```
    */
   public fen(): string {
-    return this._state.fen
+    return getFen(this._state)
   }
 
   /**
@@ -404,7 +407,7 @@ export class Chess {
     const positions: Record<string, number> = {}
 
     const checkState = (state: State): boolean => {
-      const key = state.fen.split(' ').slice(0, 4).join(' ')
+      const key = getFen(state).split(' ').slice(0, 4).join(' ')
 
       // Has the position occurred three or move times?
       positions[key] = key in positions ? positions[key] + 1 : 1
@@ -434,9 +437,9 @@ export class Chess {
   public inDraw(): boolean {
     return (
       this._state.half_moves >= 100 ||
-        this.inStalemate() ||
-        this.insufficientMaterial() ||
-        this.inThreefoldRepetition()
+      this.inStalemate() ||
+      this.insufficientMaterial() ||
+      this.inThreefoldRepetition()
     )
   }
 
@@ -626,7 +629,7 @@ export class Chess {
       return false
     }
 
-    const [ state, header, comments, history ] = res
+    const [state, header, comments, history] = res
     this._state = state
     this._header = header
     this._comments = comments
@@ -1050,7 +1053,7 @@ export class Chess {
   public getComments(): FenComment[] {
     this.pruneComments()
     return Object.keys(this._comments).map((fen) => {
-      return {fen: fen, comment: this._comments[fen]}
+      return { fen: fen, comment: this._comments[fen] }
     }) as FenComment[]
   }
 
@@ -1134,7 +1137,7 @@ export class Chess {
     return Object.keys(this._comments).map((fen) => {
       const comment = this._comments[fen]
       delete this._comments[fen]
-      return {fen: fen, comment: comment}
+      return { fen: fen, comment: comment }
     }) as FenComment[]
   }
 
@@ -1161,8 +1164,8 @@ export class Chess {
     const clone = new Chess()
     clone._state = this._state
     clone._history = [...this._history]
-    clone._header = {...this._header}
-    clone._comments = {...this._comments}
+    clone._header = { ...this._header }
+    clone._comments = { ...this._comments }
     return clone
   }
 
@@ -1198,7 +1201,7 @@ export class Chess {
    * @internal
    */
   protected updateSetup(): void {
-    const fen = this._state.fen
+    const fen = getFen(this._state)
     if (this._history.length > 0) return
 
     if (fen !== DEFAULT_POSITION) {
@@ -1222,11 +1225,11 @@ export class Chess {
 
     this._history.forEach(({ state: historyState }) => {
       state = historyState
-      copyComments(state.fen)
+      copyComments(getFen(state))
     })
 
     let state = this._state
-    copyComments(state.fen)
+    copyComments(getFen(state))
 
     this._comments = comments
   }

@@ -7,13 +7,14 @@ import { useRef } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 import { useControls } from "leva";
-import { useHover } from "./useHover";
 import React from "react";
 import { useSpring } from "@react-spring/core";
 import { a } from "@react-spring/three";
-import { useStore } from "./store";
-import { Square } from "@/chess/types";
-import toast from "react-hot-toast";
+import { Color, Square } from "@/chess/types";
+import { useAtom } from "jotai";
+import { $ } from "src/atoms";
+import { useHover } from "./useHover";
+import { BLACK } from "@/chess";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -32,7 +33,7 @@ type GLTFResult = GLTF & {
 
 export function Piece({
   piece = "Queen" as PieceType,
-  color = "black",
+  color = BLACK as Color,
   square = "a1" as Square,
   position = [0, 0, 0] as [number, number, number],
   ...props
@@ -42,15 +43,25 @@ export function Piece({
     white_piece: "#FFFFFF",
   });
   const [x, y, z] = position;
-  const [isHovered, bind] = useHover();
-  const selectSquare = useStore((s) => s.selectSquare);
-  const selectedSquare = useStore((s) => s.selectedSquare);
+
+  const [isSquareHovered, setIsSquareHovered] = useAtom(
+    $.isHoveredSquare(square)
+  );
+
+  const [selectedSquare, setSelectedSquare] = useAtom($.selectedSquare);
 
   const isSelected = selectedSquare === square;
+  const [_, bind] = useHover({
+    onPointerEnter: (e) => {
+      setIsSquareHovered(true);
+    },
+    onPointerLeave: (e) => {
+      setIsSquareHovered(false);
+    },
+  });
 
-  // create a common spring that will be used later to interpolate other values
   const { spring: hoverSpring } = useSpring({
-    spring: isHovered || isSelected ? 1 : 0,
+    spring: isSquareHovered || isSelected ? 1 : 0,
     config: { mass: 5, tension: 400, friction: 50, precision: 0.0001 },
   });
 
@@ -68,19 +79,18 @@ export function Piece({
         {...bind}
         piece={piece}
         onPointerDown={() => {
-          selectSquare(square);
-          toast("selected " + square);
+          setSelectedSquare(square);
         }}
-        rotation={[-Math.PI / 2, 0, color === "black" ? Math.PI : 0]}
+        rotation={[-Math.PI / 2, 0, color === BLACK ? Math.PI : 0]}
         {...props}
       >
         <meshStandardMaterial
           color={
-            isHovered
+            isSquareHovered
               ? "red"
               : isSelected
               ? "gold"
-              : color === "black"
+              : color === BLACK
               ? colors["black_piece"]
               : colors["white_piece"]
           }
@@ -118,51 +128,6 @@ export function PieceModel({
         >
           {children}
         </mesh>
-        {/* <mesh
-          name="Queen"
-          castShadow
-          receiveShadow
-          geometry={nodes.Queen.geometry}
-          material={materials.black_piece}
-          rotation={[-Math.PI / 2, 0, 0]}
-          userData={{ name: "Queen" }}
-        />
-        <mesh
-          name="Bishop"
-          castShadow
-          receiveShadow
-          geometry={nodes.Bishop.geometry}
-          material={nodes.Bishop.material}
-          rotation={[-Math.PI / 2, 0, 0]}
-          userData={{ name: "Bishop" }}
-        />
-        <mesh
-          name="King"
-          castShadow
-          receiveShadow
-          geometry={nodes.King.geometry}
-          material={nodes.King.material}
-          rotation={[-Math.PI / 2, 0, 0]}
-          userData={{ name: "King" }}
-        />
-        <mesh
-          name="Knight"
-          castShadow
-          receiveShadow
-          geometry={nodes.Knight.geometry}
-          material={nodes.Knight.material}
-          rotation={[-Math.PI / 2, 0, 0]}
-          userData={{ name: "Knight" }}
-        />
-        <mesh
-          name="Pawn"
-          castShadow
-          receiveShadow
-          geometry={nodes.Pawn.geometry}
-          material={nodes.Pawn.material}
-          rotation={[-Math.PI / 2, 0, 0]}
-          userData={{ name: "Pawn" }}
-        /> */}
       </group>
     </group>
   );

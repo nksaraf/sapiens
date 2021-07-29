@@ -1,6 +1,6 @@
 
 import { firefox } from 'playwright';
-import { Chess, WHITE } from './lib/chess'
+import { Chess, WHITE } from './src/lib/chess'
 // import stockfish from 'stockfish';
 
 // let fish = stockfish();
@@ -65,8 +65,8 @@ import { Chess, WHITE } from './lib/chess'
 
   const chess = new Chess();
 
-  let board = await page.$('chess-board')
-  let { width, height } = await board.boundingBox()
+  let board = (await page.$('chess-board'))!
+  let { width, height } = (await board.boundingBox())!
   let cellWidth = (width / 8);
   let cellHeight = (height / 8);
 

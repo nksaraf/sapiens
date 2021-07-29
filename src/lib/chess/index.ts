@@ -14,4 +14,4 @@ export {
     FLAGS,
     BITS,
 } from './constants'
-export { rank, file, algebraic } from './utils'
+export * from './utils'

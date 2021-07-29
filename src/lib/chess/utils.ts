@@ -1,5 +1,6 @@
 import {
   BLACK,
+  SQUARES,
   WHITE,
 } from './constants'
 import {
@@ -31,10 +32,32 @@ export function file(i: number): number {
  * Converts a 0x88 square to algebraic notation.
  * @public
  */
-export function algebraic(i: number): string {
+export function algebraic(i: number): Square {
   const f = file(i)
   const r = rank(i)
-  return 'abcdefgh'.substring(f, f + 1) + '87654321'.substring(r, r + 1)
+  return 'abcdefgh'.substring(f, f + 1) + '87654321'.substring(r, r + 1) as Square
+}
+
+/**
+ * Returns the color of the square ('light' or 'dark').
+ *
+ * @example
+ * ```js
+ * squareColor('h1')
+ * // -> 'light'
+ * squareColor('a7')
+ * // -> 'dark'
+ * squareColor('bogus square')
+ * // -> null
+ * ```
+ */
+export function squareColor(square: Square): 'light' | 'dark' | null {
+  if (isSquare(square)) {
+    const sq_0x88 = SQUARES[square]
+    return (rank(sq_0x88) + file(sq_0x88)) % 2 === 0 ? 'light' : 'dark'
+  }
+
+  return null
 }
 
 /**
