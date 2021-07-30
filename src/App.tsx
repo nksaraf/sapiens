@@ -17,12 +17,13 @@ import { algebraic, file, rank, SQUARES } from "src/lib/chess";
 import type { Square as SquareType } from "src/lib/chess";
 import { DirectionalLightHelper, GridHelper } from "three";
 import { Toaster } from "react-hot-toast";
-import { Provider, useAtom } from "jotai";
+import { atom, Provider, useAtom } from "jotai";
 import { $ } from "src/atoms";
 import {
   buildMove,
   createNewGame,
   createState,
+  getEngineMove,
   getFen,
   getPiece,
   makeMove,
@@ -31,8 +32,9 @@ import {
 import { Text } from "@react-three/drei";
 import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
 import { Square } from "./Square";
-import { DEFAULT_POSITION } from "@/chess/constants";
-import { Engine } from "@/uci/engine";
+import { BLACK, DEFAULT_POSITION } from "@/chess/constants";
+import { Engine } from "@/chess/engine";
+import { HexMove, State } from "@/chess/types";
 
 function Camera() {
   const props = useControls("camera", {
@@ -63,60 +65,26 @@ function Controls() {
   return props.enabled ? <OrbitControls makeDefault /> : null;
 }
 
-const pieceMap = {
-  p: "Pawn",
-  r: "Rook",
-  q: "Queen",
-  k: "King",
-  n: "Knight",
-  b: "Bishop",
-} as const;
-
-const colorMap = {
-  b: "black",
-  w: "white",
-} as const;
-
-// (async function () {
-//   const engine = new Engine();
-
-//   engine.start(console.log);
-
-//   // stockfish.postMessage("position fen " + DEFAULT_POSITION);
-//   let game = createNewGame();
-
-//   for (var i = 0; i < 10; i++) {
-//     game = await new Promise((res) => {
-//       engine.go({ fen: getFen(game) }, { depth: 10 }, (move) => {
-//         console.log(
-//           getFen(game),
-//           move.getBestMove(),
-//           sanToMove(game, move.getBestMove(), { sloppy: true })!
-//         );
-//         res(
-//           makeMove(game, sanToMove(game, move.getBestMove(), { sloppy: true })!)
-//         );
-//       });
-//     });
-//   }
-// })();
+const playEngineMove$ = atom(null, (get, set) => {
+  getEngineMove(get($.engine), get($.board)).then((move) =>
+    set($.board, (board) => makeMove(board, move))
+  );
+});
 
 function StockfishEngine() {
-  const [engine] = useState(() => {
-    new Engine();
-  });
+  const engine = useAtomValue($.engine);
+  const [board] = useAtom($.board);
 
-  React.useEffect(() => {}, [engine]);
+  const playEngineMove = useUpdateAtom(playEngineMove$);
+
+  React.useEffect(() => {
+    if (board.turn === BLACK) {
+      let timer = setTimeout(() => playEngineMove(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [engine, board.turn]);
   return null;
 }
-
-// start search
-// stockfish.postMessage("go depth 10");
-
-// setTimeout(() => {
-//   console.log("heree");
-//   stockfish.postMessage("stop");
-// }, 2000);
 
 function BoardSquare({ index, square }: { index: number; square: SquareType }) {
   const props = useControls("board", {
@@ -150,7 +118,7 @@ function BoardSquare({ index, square }: { index: number; square: SquareType }) {
           ]}
           square={square as SquareType}
           key={piece.color + piece.type + index}
-          piece={pieceMap[piece.type]}
+          piece={piece.type}
           color={piece.color}
         />
       )}
@@ -196,7 +164,7 @@ function Light() {
         ref={ref}
         castShadow
         {...useControls("directionalLight", {
-          position: { value: [-10, 15, -10] },
+          position: { value: [-10, 30, -10] },
           // target: { value: [0, 0, 5] },
           intensity: { value: 1, step: 0.1 },
         })}
@@ -234,7 +202,9 @@ export function App() {
         <Canvas shadows>
           <color attach="background" args={["black"]} />
           <Camera />
-          <StockfishEngine />
+          <Suspense fallback={null}>
+            <StockfishEngine />
+          </Suspense>
           <UI />
           <Controls />
           <Light />

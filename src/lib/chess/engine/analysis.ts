@@ -1,4 +1,4 @@
-import { ISearchConfig } from "./engine";
+import { ISearchConfig } from ".";
 
 
 /**

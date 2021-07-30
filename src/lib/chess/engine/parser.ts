@@ -1,5 +1,5 @@
 import { IScore } from "./analysis";
-import { IEngineOption, IEngineId } from "./engine";
+import { IEngineOption, IEngineId } from ".";
 
 /**
  * @class Parser {

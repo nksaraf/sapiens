@@ -1,6 +1,6 @@
 import { EventEmitter } from "eventemitter3";
 import { IAnalysis } from "./analysis";
-import { IEngineId, IEngineOption } from "./engine";
+import { IEngineId, IEngineOption } from ".";
 import { OutputEvent, ReadyEvent, UciOkEvent, IdEvent, BestMoveEvent, OptionEvent, EvaluationEvent, Event } from "./event";
 import { Parser } from "./parser";
 

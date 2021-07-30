@@ -1,5 +1,5 @@
 import { IAnalysis } from "./analysis";
-import { IEngineId, IEngineOption } from "./engine";
+import { IEngineId, IEngineOption } from ".";
 
 /**
  * @abstract

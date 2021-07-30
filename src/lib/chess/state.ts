@@ -25,6 +25,7 @@ import {
   WHITE,
   DEFAULT_POSITION,
 } from './constants'
+import { Engine } from './engine'
 import {
   Board,
   Color,
@@ -1257,4 +1258,12 @@ export function validateMove(
   }
 
   return null
+}
+
+export function getEngineMove(engine: Engine, state: State) {
+  return new Promise<HexMove>((res) =>
+    engine.go({ fen: getFen(state) }, { depth: 10 }, (move) => {
+      res(sanToMove(state, move.getBestMove(), { sloppy: true })!);
+    })
+  );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { useControls } from "leva";
+import { folder, useControls } from "leva";
 import { Square as SquareType } from "src/lib/chess";
 import { useStore } from "./store";
 import { squareColor } from "@/chess/utils";
@@ -19,6 +19,10 @@ export function Square({
   const props = useControls("square", {
     width: { value: 2.5, step: 0.1 },
     height: { value: 2.5, step: 0.1 },
+    color: folder({
+      light: "#d7ff7e",
+      dark: "#456f1b",
+    }),
   });
 
   const color = squareColor(square);
@@ -44,7 +48,7 @@ export function Square({
     },
   });
 
-  const moves = useAtomValue($.moves(selectedSquare || "a1"));
+  const moves = useAtomValue($.moves(selectedSquare || "none"));
 
   const availableMove = moves.find((m) => m.to === square);
 
@@ -63,7 +67,7 @@ export function Square({
       onPointerDown={(e) => {
         if (isMovable) {
           updateGame((s) => makeMove(s, sanToMove(s, availableMove!.san)!));
-          setSelectedSquare(null);
+          setSelectedSquare("none");
         }
         if (piece?.color === turn) {
           setSelectedSquare(square);
@@ -88,8 +92,8 @@ export function Square({
             : isMovable
             ? "blue"
             : color == "light"
-            ? "white"
-            : "black"
+            ? props.light
+            : props.dark
         }
       />
     </mesh>

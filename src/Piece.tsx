@@ -10,11 +10,11 @@ import { useControls } from "leva";
 import React from "react";
 import { useSpring } from "@react-spring/core";
 import { a } from "@react-spring/three";
-import { Color, Square } from "@/chess/types";
+import { Color, PieceSymbol, Square } from "@/chess/types";
 import { useAtom } from "jotai";
 import { $ } from "src/atoms";
 import { useHover } from "./useHover";
-import { BLACK } from "@/chess";
+import { BISHOP, BLACK, KING, KNIGHT, PAWN, QUEEN, ROOK } from "@/chess";
 import { useAtomValue } from "jotai/utils";
 
 type GLTFResult = GLTF & {
@@ -32,8 +32,17 @@ type GLTFResult = GLTF & {
   };
 };
 
+const pieceMap = {
+  [PAWN]: "Pawn",
+  [ROOK]: "Rook",
+  [QUEEN]: "Queen",
+  [KING]: "King",
+  [KNIGHT]: "Knight",
+  [BISHOP]: "Bishop",
+} as const;
+
 export function Piece({
-  piece = "Queen" as PieceType,
+  piece = "q" as PieceSymbol,
   color = BLACK as Color,
   square = "a1" as Square,
   position = [0, 0, 0] as [number, number, number],
@@ -79,7 +88,7 @@ export function Piece({
     >
       <PieceModel
         {...bind}
-        piece={piece}
+        piece={pieceMap[piece]}
         onPointerDown={() => {
           if (color === turn) {
             setSelectedSquare(square);
@@ -88,7 +97,8 @@ export function Piece({
         rotation={[-Math.PI / 2, 0, color === BLACK ? Math.PI : 0]}
         {...props}
       >
-        <meshToonMaterial
+        <meshLambertMaterial
+          reflectivity={0.5}
           color={
             color === BLACK ? colors["black_piece"] : colors["white_piece"]
           }

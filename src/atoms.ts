@@ -4,6 +4,7 @@ import { atomFamily, atomWithReset } from "jotai/utils"
 import { Square, State } from "./lib/chess/types"
 import { DEFAULT_POSITION, EMPTY, WHITE } from "./lib/chess/constants"
 import { generateMoves, getFen, getPiece, loadFen, makePretty } from "./lib/chess/state"
+import { Engine } from "@/chess/engine"
 
 const board$ = atomWithReset({
   board: new Array(128),
@@ -22,10 +23,15 @@ board$.onMount = ((set) => {
   }
 });
 
+const engine$ = atom<Engine>(async () => {
+  const engine = new Engine();
+  return new Promise(res => engine.start((opt) => res(engine)));
+})
+
 const turn$ = focusAtom(board$, (optic) => optic.prop('turn'))
 
 const boardFen$ = atom((get) => {
-  getFen(get(board$))
+  return getFen(get(board$))
 })
 
 const allMoves$ = atom((get) => {
@@ -33,14 +39,18 @@ const allMoves$ = atom((get) => {
   return generateMoves(board).map(move => makePretty(board, move))
 })
 
-const moves$ = atomFamily((square: Square) => atom((get) => {
+const selectedSquare$ = atom("none" as Square | "none")
+
+const moves$ = atomFamily((square: Square | "none") => atom((get) => {
+  if (square === 'none') {
+    return [];
+  }
   const board = get(board$);
   return generateMoves(board, { square }).map(move => makePretty(board, move))
 }))
 
-const selectedSquare$ = atom(null as Square | null)
 
-const hoveredSquare$ = atom('a1' as Square | null)
+const hoveredSquare$ = atom('none' as Square | "none")
 
 const dispatch$ = atom(
   null,
@@ -78,7 +88,8 @@ export const atoms = {
   isHoveredSquare: isHoveredSquare$,
   selectedSquare: selectedSquare$,
   turn: turn$,
-  piece: piece$
+  piece: piece$,
+  engine: engine$
 }
 
 export const $ = atoms
