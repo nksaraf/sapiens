@@ -586,6 +586,10 @@ export function createState(): State {
   }
 }
 
+export function createNewGame(): State {
+  return loadFen(DEFAULT_POSITION)!;
+}
+
 export function cloneState(state: State): State {
   return {
     kings: { ...state.kings },

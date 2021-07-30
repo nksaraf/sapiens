@@ -15,6 +15,7 @@ import { useAtom } from "jotai";
 import { $ } from "src/atoms";
 import { useHover } from "./useHover";
 import { BLACK } from "@/chess";
+import { useAtomValue } from "jotai/utils";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -40,7 +41,7 @@ export function Piece({
 }) {
   const colors = useControls("colors", {
     black_piece: "#414141",
-    white_piece: "#FFFFFF",
+    white_piece: "#c4bdbd",
   });
   const [x, y, z] = position;
 
@@ -49,7 +50,6 @@ export function Piece({
   );
 
   const [selectedSquare, setSelectedSquare] = useAtom($.selectedSquare);
-
   const isSelected = selectedSquare === square;
   const [_, bind] = useHover({
     onPointerEnter: (e) => {
@@ -59,9 +59,11 @@ export function Piece({
       setIsSquareHovered(false);
     },
   });
+  const turn = useAtomValue($.turn);
+  const isSelectable = color === turn;
 
   const { spring: hoverSpring } = useSpring({
-    spring: isSquareHovered || isSelected ? 1 : 0,
+    spring: (isSquareHovered && isSelectable) || isSelected ? 1 : 0,
     config: { mass: 5, tension: 400, friction: 50, precision: 0.0001 },
   });
 
@@ -79,20 +81,16 @@ export function Piece({
         {...bind}
         piece={piece}
         onPointerDown={() => {
-          setSelectedSquare(square);
+          if (color === turn) {
+            setSelectedSquare(square);
+          }
         }}
         rotation={[-Math.PI / 2, 0, color === BLACK ? Math.PI : 0]}
         {...props}
       >
-        <meshStandardMaterial
+        <meshToonMaterial
           color={
-            isSquareHovered
-              ? "red"
-              : isSelected
-              ? "gold"
-              : color === BLACK
-              ? colors["black_piece"]
-              : colors["white_piece"]
+            color === BLACK ? colors["black_piece"] : colors["white_piece"]
           }
         />
       </PieceModel>

@@ -23,11 +23,7 @@ export function Square({
 
   const color = squareColor(square);
 
-  // const isMovable = selectedSquare
-  //   ? game
-  //       .moves({ square: selectedSquare })
-  //       .some((m) => game.move(m, { dry_run: true })?.to === square)
-  //   : false;
+  const piece = useAtomValue($.piece(square));
 
   const [isSquareHovered, setIsSquareHovered] = useAtom(
     $.isHoveredSquare(square)
@@ -56,6 +52,11 @@ export function Square({
 
   const updateGame = useUpdateAtom($.board);
 
+  const turn = useAtomValue($.turn);
+
+  const isSelectable = piece ? piece.color === turn : false;
+  const isKilling = isMovable && piece && piece.color != turn;
+
   return (
     <mesh
       {...bind}
@@ -64,7 +65,9 @@ export function Square({
           updateGame((s) => makeMove(s, sanToMove(s, availableMove!.san)!));
           setSelectedSquare(null);
         }
-        setSelectedSquare(square);
+        if (piece?.color === turn) {
+          setSelectedSquare(square);
+        }
         e.stopPropagation();
       }}
       receiveShadow
@@ -72,12 +75,16 @@ export function Square({
       castShadow
     >
       <boxBufferGeometry args={[props.width, 2, props.height]} />
-      <meshLambertMaterial
+      <meshToonMaterial
         color={
-          isSquareHovered
-            ? "red"
+          isMovable && isSquareHovered
+            ? "green"
+            : isSquareHovered && isSelectable
+            ? "gold"
             : isSelected
             ? "gold"
+            : isKilling
+            ? "red"
             : isMovable
             ? "blue"
             : color == "light"

@@ -10,7 +10,7 @@ import {
   useHelper,
 } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import React, { Suspense, useDebugValue, useRef } from "react";
+import React, { Suspense, useDebugValue, useRef, useState } from "react";
 import { useControls } from "leva";
 import { Piece } from "./Piece";
 import { algebraic, file, rank, SQUARES } from "src/lib/chess";
@@ -19,9 +19,20 @@ import { DirectionalLightHelper, GridHelper } from "three";
 import { Toaster } from "react-hot-toast";
 import { Provider, useAtom } from "jotai";
 import { $ } from "src/atoms";
-import { getPiece } from "@/chess/state";
+import {
+  buildMove,
+  createNewGame,
+  createState,
+  getFen,
+  getPiece,
+  makeMove,
+  sanToMove,
+} from "@/chess/state";
+import { Text } from "@react-three/drei";
 import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
 import { Square } from "./Square";
+import { DEFAULT_POSITION } from "@/chess/constants";
+import { Engine } from "@/uci/engine";
 
 function Camera() {
   const props = useControls("camera", {
@@ -65,6 +76,47 @@ const colorMap = {
   b: "black",
   w: "white",
 } as const;
+
+// (async function () {
+//   const engine = new Engine();
+
+//   engine.start(console.log);
+
+//   // stockfish.postMessage("position fen " + DEFAULT_POSITION);
+//   let game = createNewGame();
+
+//   for (var i = 0; i < 10; i++) {
+//     game = await new Promise((res) => {
+//       engine.go({ fen: getFen(game) }, { depth: 10 }, (move) => {
+//         console.log(
+//           getFen(game),
+//           move.getBestMove(),
+//           sanToMove(game, move.getBestMove(), { sloppy: true })!
+//         );
+//         res(
+//           makeMove(game, sanToMove(game, move.getBestMove(), { sloppy: true })!)
+//         );
+//       });
+//     });
+//   }
+// })();
+
+function StockfishEngine() {
+  const [engine] = useState(() => {
+    new Engine();
+  });
+
+  React.useEffect(() => {}, [engine]);
+  return null;
+}
+
+// start search
+// stockfish.postMessage("go depth 10");
+
+// setTimeout(() => {
+//   console.log("heree");
+//   stockfish.postMessage("stop");
+// }, 2000);
 
 function BoardSquare({ index, square }: { index: number; square: SquareType }) {
   const props = useControls("board", {
@@ -155,9 +207,22 @@ function Light() {
 
 function UI() {
   return (
-    <Html position={[-30, 0, 0]}>
-      <div>Turn: {useAtomValue($.turn)} </div>
-    </Html>
+    <>
+      {" "}
+      <Text
+        position={[-30, 0, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        color="white"
+        fontSize={4}
+        anchorX="center"
+        anchorY="middle"
+      >
+        hello world!
+      </Text>
+      <Html position={[-30, 0, 0]}>
+        <div>Turn: {useAtomValue($.turn)} </div>
+      </Html>
+    </>
   );
 }
 
@@ -169,21 +234,21 @@ export function App() {
         <Canvas shadows>
           <color attach="background" args={["black"]} />
           <Camera />
+          <StockfishEngine />
           <UI />
           <Controls />
-          {/* <gridHelper /> */}
+          <Light />
           <Suspense fallback={<Box />}>
-            <Light />
-            {/* <CenterPiece /> */}
             <Board />
-            {/* <Environment path="/hdri/" preset="city" /> */}
           </Suspense>
-          {/* <Plane
+          <Plane
             receiveShadow
             args={[200, 200]}
             position={[0, -2, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
-          /> */}
+          >
+            <meshStandardMaterial color="orange" />
+          </Plane>
           <Sky
             distance={4500}
             sunPosition={[0, 20, -200]}
