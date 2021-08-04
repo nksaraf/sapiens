@@ -3,25 +3,13 @@ import { focusAtom } from "jotai/optics"
 import { atomFamily, atomWithReset } from "jotai/utils"
 import { Square, State } from "./lib/chess/types"
 import { DEFAULT_POSITION, EMPTY, WHITE } from "./lib/chess/constants"
-import { generateMoves, getFen, getPiece, loadFen, makePretty } from "./lib/chess/state"
+import { createState, generateMoves, getFen, getPiece, inCheck, inCheckmate, loadFen, makePretty } from "./lib/chess/state"
 import { Engine } from "@/chess/engine"
+import create from "zustand"
+import { atomWithStore } from 'jotai/zustand'
+import { combine } from "zustand/middleware"
 
-const board$ = atomWithReset({
-  board: new Array(128),
-  kings: { w: EMPTY, b: EMPTY },
-  turn: WHITE,
-  castling: { w: 0, b: 0 },
-  ep_square: EMPTY,
-  half_moves: 0,
-  move_number: 1
-} as State)
-
-board$.onMount = ((set) => {
-  const state = loadFen(DEFAULT_POSITION)
-  if (state) {
-    set(() => ({ ...state } as any))
-  }
-});
+const board$ = atomWithReset(loadFen(DEFAULT_POSITION)!)
 
 const engine$ = atom<Engine>(async () => {
   const engine = new Engine();
@@ -49,6 +37,7 @@ const moves$ = atomFamily((square: Square | "none") => atom((get) => {
   return generateMoves(board, { square }).map(move => makePretty(board, move))
 }))
 
+const inCheckmate$ = atom((get) => inCheckmate(get(board$)))
 
 const hoveredSquare$ = atom('none' as Square | "none")
 
@@ -76,6 +65,84 @@ const isHoveredSquare$ = atomFamily((square: Square) =>
   atom(false)
 );
 
+const gameState$ = atom({
+  state: 'playing',
+})
+
+import { Loader } from "three";
+// @ts-ignore
+import { GLTFLoader, DRACOLoader, MeshoptDecoder } from "three-stdlib";
+
+function extensions(
+  useDraco: boolean | string,
+  useMeshopt: boolean,
+  extendLoader?: (loader: GLTFLoader) => void
+) {
+  return (loader: Loader) => {
+    if (extendLoader) {
+      extendLoader(loader as GLTFLoader);
+    }
+    if (useDraco) {
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath(
+        typeof useDraco === "string"
+          ? useDraco
+          : "https://www.gstatic.com/draco/v1/decoders/"
+      );
+      (loader as GLTFLoader).setDRACOLoader(dracoLoader);
+    }
+    if (useMeshopt) {
+      (loader as GLTFLoader).setMeshoptDecoder(MeshoptDecoder);
+    }
+  };
+}
+
+const gltfAsset$ = atomFamily((path: string) =>
+  atom(async (get) => {
+    const loader = new GLTFLoader();
+    extensions(true, true, () => { })(loader);
+    return loader.loadAsync(path);
+  })
+);
+
+export const useCharacter = create(combine({
+  state: 'idle' as 'idle' | 'walk' | 'run' | 'attack',
+  controls: {
+    left: false,
+    right: false,
+    forward: false,
+    backward: false,
+    shift: false,
+    space: false,
+  }
+}, (set, get, api) => ({
+  // dispatch: (action: { type: 'MOVE' } | { type: 'KEYPRESS_FORWARD_IN' } | { type: 'KEYPRESS_FORWARD_OUT' } | { type: 'BACKWARD' }) => {
+  //   let prevState = get();
+  //   switch (prevState.state) {
+  //     case "idle": {
+  //       switch (action.type) {
+  //         case "MOVE": {
+  //           set({ state: 'walking' })
+  //         }
+  //         case "KEYPRESS_FORWARD_IN": {
+  //           set({ state: 'walking' })
+  //         }
+  //         case "KEYPRESS_FORWARD_IN": {
+  //           set({ state: 'walking' })
+  //         }
+  //         case "BACKWARD": {
+  //           set({ controls: { ...prevState.controls, backward: true } })
+  //         }
+  //       }
+  //     }
+  //   }
+  // },
+  set,
+  get
+})))
+
+const character$ = atomWithStore(useCharacter)
+
 const piece$ = atomFamily((square: Square) => atom(get => getPiece(get(board$), square)));
 
 export const atoms = {
@@ -89,7 +156,10 @@ export const atoms = {
   selectedSquare: selectedSquare$,
   turn: turn$,
   piece: piece$,
-  engine: engine$
+  engine: engine$,
+  inCheckmate: inCheckmate$,
+  character: character$,
+  gltfAsset: gltfAsset$
 }
 
 export const $ = atoms

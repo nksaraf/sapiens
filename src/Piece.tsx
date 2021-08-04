@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { useRef } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
-import { useControls } from "leva";
+import { folder, useControls } from "leva";
 import React from "react";
 import { useSpring } from "@react-spring/core";
 import { a } from "@react-spring/three";
@@ -16,6 +16,7 @@ import { $ } from "src/atoms";
 import { useHover } from "./useHover";
 import { BISHOP, BLACK, KING, KNIGHT, PAWN, QUEEN, ROOK } from "@/chess";
 import { useAtomValue } from "jotai/utils";
+import { useFrame } from "@react-three/fiber";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -41,18 +42,32 @@ const pieceMap = {
   [BISHOP]: "Bishop",
 } as const;
 
+const ControlledPiece = () => {
+  const props = useControls("piece", {
+    position: { value: [0, 0, 0], step: 1 },
+    color: { options: ["black", "white"] },
+    piece: {
+      options: ["Queen", "King", "Bishop", "Knight", "Rook", "Pawn"] as const,
+    },
+  });
+  return <Piece {...props} />;
+};
+
 export function Piece({
-  piece = "q" as PieceSymbol,
+  piece = QUEEN as PieceSymbol,
   color = BLACK as Color,
   square = "a1" as Square,
   position = [0, 0, 0] as [number, number, number],
   ...props
 }) {
-  const colors = useControls("colors", {
-    black_piece: "#414141",
-    white_piece: "#c4bdbd",
+  const controls = useControls("piece", {
+    color: folder({ black: "#414141", white: "#c4bdbd" }),
   });
   const [x, y, z] = position;
+
+  const ref = React.useRef<THREE.Object3D>();
+
+  useFrame(() => {});
 
   const [isSquareHovered, setIsSquareHovered] = useAtom(
     $.isHoveredSquare(square)
@@ -94,14 +109,16 @@ export function Piece({
             setSelectedSquare(square);
           }
         }}
-        rotation={[-Math.PI / 2, 0, color === BLACK ? Math.PI : 0]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          color === BLACK ? (5 / 4) * Math.PI : Math.PI / 4,
+        ]}
         {...props}
       >
         <meshLambertMaterial
-          reflectivity={0.5}
-          color={
-            color === BLACK ? colors["black_piece"] : colors["white_piece"]
-          }
+          reflectivity={10}
+          color={color === BLACK ? controls.black : controls.white}
         />
       </PieceModel>
     </a.group>
