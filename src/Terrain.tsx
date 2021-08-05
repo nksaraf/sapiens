@@ -16,6 +16,27 @@ import * as perlin from "./lib/perlin";
 //   return noiseGenerator(x, y, z);
 // }
 
+function getRandomHeight(params: {
+  position: THREE.Vector3,
+  minRadius: number,
+  maxRadius: number,
+  generator: NoiseGenerator,
+}, x: number, y: number): [number, number] {
+  const distance = params.position.distanceTo(new THREE.Vector3(x, y, 0));
+  let normalization =
+    1.0 -
+    math.sat(
+      (distance - params.minRadius) / (params.maxRadius - params.minRadius)
+    );
+  normalization = normalization * normalization * (3 - 2 * normalization);
+
+  return [params.generator.noise2D(x!, y!), 1];
+}
+
+interface HeightGenerator {
+  get(x: number, y: number): [number, number]
+}
+
 export function TerrainChunk({
   width,
   scale,
@@ -25,31 +46,31 @@ export function TerrainChunk({
 }: {
   width: number;
   scale: number;
-  offset: [number, number];
+  offset: THREE.Vector3;
   // biomeGenerator: (x: number, y: number, z: number) => number;
   heightGenerators: HeightGenerator[];
 }) {
- 
+
   const size = React.useMemo(() => {
-    return new THREE.Vector3(width * scale, 0 ,width *scale)
-  }, [width, scale ])
+    return new THREE.Vector3(width * scale, 0, width * scale)
+  }, [width, scale])
 
   const object = React.useMemo(() => {
     const geometry = new THREE.Mesh(
       new THREE.PlaneGeometry(size.x, size.z, 128, 128),
       new THREE.MeshStandardMaterial({
-          wireframe: true,
-          color: 0xFFFFFF,
-          side: THREE.FrontSide,
+        wireframe: true,
+        color: 0xFFFFFF,
+        side: THREE.FrontSide,
       }))
-      geometry.position.add(new THREE.Vector3(offset[0], offset[1], 0))
-      geometry.material.vertexColors = true
+    geometry.position.add(offset)
+    geometry.material.vertexColors = true
     return geometry;
-  }, [size]);
+  }, [size, offset]);
 
   React.useLayoutEffect(() => {
     let position = object.geometry.getAttribute('position')
-    for (var i = 0; i < position.count/ position.itemSize; i++) {
+    for (var i = 0; i < position.count; i++) {
       const heightPairs = [];
       let normalization = 0;
       let z = 0
@@ -57,18 +78,16 @@ export function TerrainChunk({
       let y = position.getY(i);
 
       for (let gen of heightGenerators) {
-        heightPairs.push(gen.get(x + offset[0], y + offset[1]));
-        normalization += heightPairs[heightPairs.length-1][1];
+        heightPairs.push(gen.get(x + offset.x, y + offset.y));
+        normalization += heightPairs[heightPairs.length - 1][1];
       }
 
-      console.log(normalization)
 
       if (normalization > 0) {
         for (let h of heightPairs) {
           z += h[0] * h[1] / normalization;
         }
       }
-      console.log(z)
       position.setZ(i, z)
     }
     // for (let v of ) {
@@ -102,9 +121,9 @@ export function TerrainChunk({
     object.geometry.attributes.position.needsUpdate = true;
     object.geometry.computeBoundingBox();
     object.geometry.computeVertexNormals();
-  }, [object, ...offset, heightGenerators])
+  }, [object, offset, heightGenerators])
   return (
-      <primitive object={object}  />
+    <primitive object={object} />
   );
 }
 
@@ -126,14 +145,15 @@ class PerlinNoise {
 const simplex$ = atomFamily((seed: string) =>
   atom(new SimplexNoise(seed) as NoiseGenerator)
 );
+
 const perlin$ = atom(new PerlinNoise() as NoiseGenerator);
 
-function getNoise(
+function get2DNoise(
   params: {
     scale: number;
     persistence: number;
     octaves: number;
-    noiseFunc: { noise2D: (arg0: number, arg1: number) => number };
+    generator: NoiseGenerator;
     lacunarity: number;
     exponentiation: number;
     height: number;
@@ -150,7 +170,7 @@ function getNoise(
   let total = 0;
   for (let o = 0; o < params.octaves; o++) {
     const noiseValue =
-      params.noiseFunc.noise2D(xs * frequency, ys * frequency) * 0.5 + 0.5;
+      params.generator.noise2D(xs * frequency, ys * frequency) * 0.5 + 0.5;
     total += noiseValue * amplitude;
     normalization += amplitude;
     amplitude *= G;
@@ -172,55 +192,61 @@ const noise$ = atomFamily((name: string) =>
   })
 );
 
-class HeightGenerator {
-  _position: any;
-  _radius: any[];
-  _generator: NoiseGenerator;
-  constructor(generator: NoiseGenerator, position: { clone: () => any; }, minRadius: number, maxRadius: number) {
-    this._position = position.clone();
-    this._radius = [minRadius, maxRadius];
-    this._generator = generator;
-  }
-
-  get(x: number | undefined, y: number | undefined) {
-    const distance = this._position.distanceTo(new THREE.Vector2(x, y));
-    let normalization =
-      1.0 -
-      math.sat(
-        (distance - this._radius[0]) / (this._radius[1] - this._radius[0])
-      );
-    normalization = normalization * normalization * (3 - 2 * normalization);
-
-    return [this._generator.noise2D(x!, y!), 1];
-  }
-}
-
-export function Terrain({ chunkSize = 500 }) {
+function useNoiseGenerator() {
   const setSeed = useUpdateAtom(seed$);
-  const controls = useControls("noise", {
+  const { noiseType, ...controls } = useControls("noise", {
     octaves: 6,
     persistence: 0.707,
     lacunarity: 1.8,
     exponentiation: 4.5,
     height: 300.0,
     scale: 800.0,
-    noiseType: "simplex",
+    noiseType: { options: ["simplex", "perlin"], value: "perlin" },
     seed: { value: 1, onChange: (value) => setSeed(value) },
   });
 
-  const noise = useAtomValue(noise$(controls.noiseType))!;
+  const noiseFn = useAtomValue(noise$(noiseType))!;
 
-  const heightGenerators = React.useMemo(() => {
-    return [new HeightGenerator(noise, new THREE.Vector3(0, 0, 0), 100000, 100000 + 1)]
+  const generator = React.useMemo(() => {
+    return {
+      noise2D(x: number, y: number) {
+        return get2DNoise({
+          ...controls,
+          generator: noiseFn
+        }, x, y)
+      },
+      noise3D(x: number, y: number, z: number) {
+        // get3DNoise({
+        //   ...ref.current,
+        //   generator: noiseFn
+        // }, x, y)
+        return 0
+      }
+    } as NoiseGenerator
+  }, [noiseFn, controls])
+
+  return generator;
+}
+
+export function Terrain({ chunkSize = 500 }) {
+  const noise = useNoiseGenerator();
+  const chunks = React.useMemo(() => {
+    const offset = new THREE.Vector3(0, 0, 0)
+    const props = [{
+      offset,
+      heightGenerators: [{ get: (x: number, y: number) => getRandomHeight({ generator: noise, position: new THREE.Vector3(0, 0, 0), minRadius: 100000, maxRadius: 100000 + 1 }, x, y) }]
+    }]
+    return props;
   }, [noise])
+
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
-      <TerrainChunk
-        offset={[0 * chunkSize, 0 * chunkSize]}
+      {chunks.map((chunk, index) => (<TerrainChunk
+        key={index}
         scale={1}
         width={chunkSize}
-        heightGenerators={heightGenerators}
-      />
+        {...chunk}
+      />))}
     </group>
   );
 }
