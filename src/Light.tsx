@@ -16,9 +16,9 @@ export function Light() {
         ref={ref}
         castShadow
         {...useControls("directionalLight", {
-          position: { value: [-10, 30, -10] },
+          position: { value: [-450, 500, -450] },
           // target: { value: [0, 0, 5] },
-          intensity: { value: 1, step: 0.1 },
+          intensity: { value: 6, step: 0.1 },
         })}
       ></spotLight>
     </>
