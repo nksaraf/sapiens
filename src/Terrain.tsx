@@ -1,9 +1,11 @@
+import { math } from "@/math";
 import { atom } from "jotai";
 import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
 import { useControls } from "leva";
 import React from "react";
 import SimplexNoise from "simplex-noise";
 import * as THREE from "three";
+import { Vector2 } from "three";
 import create from "zustand";
 import { $ } from "./atoms";
 import * as perlin from "./lib/perlin";
@@ -18,27 +20,91 @@ export function TerrainChunk({
   width,
   scale,
   offset,
-  biomeGenerator,
+  // biomeGenerator,
   heightGenerators,
 }: {
   width: number;
   scale: number;
-  offset: number;
-  biomeGenerator: (x: number, y: number, z: number) => number;
-  heightGenerators: {
-    [key: string]: (x: number, y: number, z: number) => number;
-  };
+  offset: [number, number];
+  // biomeGenerator: (x: number, y: number, z: number) => number;
+  heightGenerators: HeightGenerator[];
 }) {
-  const [object] = React.useState(() => {
-    const geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
-    geometry.rotateX(-Math.PI / 2);
+ 
+  const size = React.useMemo(() => {
+    return new THREE.Vector3(width * scale, 0 ,width *scale)
+  }, [width, scale ])
+
+  const object = React.useMemo(() => {
+    const geometry = new THREE.Mesh(
+      new THREE.PlaneGeometry(size.x, size.z, 128, 128),
+      new THREE.MeshStandardMaterial({
+          wireframe: true,
+          color: 0xFFFFFF,
+          side: THREE.FrontSide,
+      }))
+      geometry.position.add(new THREE.Vector3(offset[0], offset[1], 0))
+      geometry.material.vertexColors = true
     return geometry;
-  });
+  }, [size]);
+
+  React.useLayoutEffect(() => {
+    let position = object.geometry.getAttribute('position')
+    for (var i = 0; i < position.count/ position.itemSize; i++) {
+      const heightPairs = [];
+      let normalization = 0;
+      let z = 0
+      let x = position.getX(i);
+      let y = position.getY(i);
+
+      for (let gen of heightGenerators) {
+        heightPairs.push(gen.get(x + offset[0], y + offset[1]));
+        normalization += heightPairs[heightPairs.length-1][1];
+      }
+
+      console.log(normalization)
+
+      if (normalization > 0) {
+        for (let h of heightPairs) {
+          z += h[0] * h[1] / normalization;
+        }
+      }
+      console.log(z)
+      position.setZ(i, z)
+    }
+    // for (let v of ) {
+    //   const heightPairs = [];
+    //   let normalization = 0;
+    //   v.z = 0;
+    //   for (let gen of this._params.heightGenerators) {
+    //     heightPairs.push(gen.Get(v.x + offset.x, v.y + offset.y));
+    //     normalization += heightPairs[heightPairs.length-1][1];
+    //   }
+
+    //   if (normalization > 0) {
+    //     for (let h of heightPairs) {
+    //       v.z += h[0] * h[1] / normalization;
+    //     }
+    //   }
+
+    //   colours.push(this._ChooseColour(v.x + offset.x, v.z, v.y + offset.y));
+    // }
+
+    // for (let f of object.geometry.faces) {
+    //   const vs = [f.a, f.b, f.c];
+
+    //   const vertexColours = [];
+    //   for (let v of vs) {
+    //     vertexColours.push(colours[v]);
+    //   }
+    //   f.vertexColors = vertexColours;
+    // }
+    // object.geometry.elementsNeedUpdate = true;
+    object.geometry.attributes.position.needsUpdate = true;
+    object.geometry.computeBoundingBox();
+    object.geometry.computeVertexNormals();
+  }, [object, ...offset, heightGenerators])
   return (
-    <mesh>
-      <primitive object={object} attach="geometry" />
-      <meshStandardMaterial color="red" />
-    </mesh>
+      <primitive object={object}  />
   );
 }
 
@@ -107,13 +173,16 @@ const noise$ = atomFamily((name: string) =>
 );
 
 class HeightGenerator {
-  constructor(generator, position, minRadius, maxRadius) {
+  _position: any;
+  _radius: any[];
+  _generator: NoiseGenerator;
+  constructor(generator: NoiseGenerator, position: { clone: () => any; }, minRadius: number, maxRadius: number) {
     this._position = position.clone();
     this._radius = [minRadius, maxRadius];
     this._generator = generator;
   }
 
-  Get(x, y) {
+  get(x: number | undefined, y: number | undefined) {
     const distance = this._position.distanceTo(new THREE.Vector2(x, y));
     let normalization =
       1.0 -
@@ -122,7 +191,7 @@ class HeightGenerator {
       );
     normalization = normalization * normalization * (3 - 2 * normalization);
 
-    return [this._generator.Get(x, y), normalization];
+    return [this._generator.noise2D(x!, y!), 1];
   }
 }
 
@@ -139,15 +208,18 @@ export function Terrain({ chunkSize = 500 }) {
     seed: { value: 1, onChange: (value) => setSeed(value) },
   });
 
-  const noise = useAtomValue(noise$(controls.noiseType));
+  const noise = useAtomValue(noise$(controls.noiseType))!;
 
+  const heightGenerators = React.useMemo(() => {
+    return [new HeightGenerator(noise, new THREE.Vector3(0, 0, 0), 100000, 100000 + 1)]
+  }, [noise])
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
       <TerrainChunk
         offset={[0 * chunkSize, 0 * chunkSize]}
         scale={1}
         width={chunkSize}
-        heightGenerators={}
+        heightGenerators={heightGenerators}
       />
     </group>
   );

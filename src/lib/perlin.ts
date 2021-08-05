@@ -532,8 +532,6 @@ export default function noise(x: any, y: any, z: any, w: any) {
       break;
     case 3:
       return noise3(x, y, z);
-    case 3:
-      return noise4(x, y, z, w);
       break;
   }
 }

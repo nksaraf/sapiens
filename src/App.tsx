@@ -100,9 +100,9 @@ export function App() {
         <Canvas shadows>
           <color attach="background" args={["black"]} />
           <GameCamera />
-          <Suspense fallback={null}>
+          {/* <Suspense fallback={null}>
             <StockfishEngine />
-          </Suspense>
+          </Suspense> */}
           <Terrain />
           {/* <UI /> */}
           <Keyboard />
@@ -132,10 +132,9 @@ export function App() {
           </Suspense> */}
           <Stats />
         </Canvas>
-        <LevaPanel collapsed />
         <Debugger />
       </div>
-      <Avatar />
+      {/* <Avatar /> */}
     </Provider>
   );
 }
