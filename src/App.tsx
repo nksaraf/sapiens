@@ -11,11 +11,11 @@ import { useAtomValue, useUpdateAtom } from "jotai/utils";
 import { BLACK } from "@/chess/constants";
 import { Camera } from "./Camera";
 import { Light } from "./Light";
-import { Character } from "./Cow";
-import { Board } from "./Board";
+import { Character } from "./models/Cow";
+import { Board } from "./models/chess/Board";
 import { LevaPanel } from "leva";
 import { Keyboard } from "./Keyboard";
-import PlayerModel from "./Player";
+import PlayerModel from "./models/Player";
 import { Terrain } from "./Terrain";
 
 const playEngineMove$ = atom(null, (get, set) => {

@@ -10,7 +10,7 @@ import { AnimationClip } from "three";
 import { useControls } from "leva";
 import { atomFamily, useAtomValue } from "jotai/utils";
 import { atom } from "jotai";
-import { $, useCharacter } from "./atoms";
+import { $, useCharacter } from "../atoms";
 
 type GLTFResult = GLTF & {
   nodes: {

@@ -3,7 +3,7 @@ import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
 import { folder, useControls } from "leva";
 import React from "react";
 import SimplexNoise from "simplex-noise";
-import * as perlin from "./lib/perlin";
+import * as perlin from "./perlin";
 
 export interface NoiseGenerator {
   noise2D(x: number, y: number): number;

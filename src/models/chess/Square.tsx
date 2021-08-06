@@ -1,11 +1,10 @@
 import React from "react";
 import { folder, useControls } from "leva";
 import { Square as SquareType } from "src/lib/chess";
-import { useStore } from "./store";
 import { squareColor } from "@/chess/utils";
-import { useHover } from "./useHover";
+import { useHover } from "../../lib/useHover";
 import { useAtom } from "jotai";
-import { $ } from "./atoms";
+import { $ } from "../../atoms";
 import { useAtomValue, useUpdateAtom } from "jotai/utils";
 import { buildMove, makeMove, sanToMove } from "@/chess/state";
 

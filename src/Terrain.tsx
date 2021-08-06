@@ -4,8 +4,8 @@ import * as THREE from "three";
 import { Vector2 } from "three";
 import create from "zustand";
 import { $ } from "./atoms";
-import { NoiseGenerator, useNoiseGenerator } from "./noise";
-import { LinearSpline } from "./spline";
+import { NoiseGenerator, useNoiseGenerator } from "./lib/noise";
+import { LinearSpline } from "./lib/spline";
 
 // const terrainChunk$ = atom();
 

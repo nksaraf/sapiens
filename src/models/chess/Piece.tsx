@@ -13,7 +13,7 @@ import { a } from "@react-spring/three";
 import { Color, PieceSymbol, Square } from "@/chess/types";
 import { useAtom } from "jotai";
 import { $ } from "src/atoms";
-import { useHover } from "./useHover";
+import { useHover } from "../../lib/useHover";
 import { BISHOP, BLACK, KING, KNIGHT, PAWN, QUEEN, ROOK } from "@/chess";
 import { useAtomValue } from "jotai/utils";
 import { useFrame } from "@react-three/fiber";
