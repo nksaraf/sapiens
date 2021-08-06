@@ -5,6 +5,7 @@ import { Vector2 } from "three";
 import create from "zustand";
 import { $ } from "./atoms";
 import { NoiseGenerator, useNoiseGenerator } from "./noise";
+import { LinearSpline } from "./spline";
 
 // const terrainChunk$ = atom();
 
@@ -12,12 +13,16 @@ import { NoiseGenerator, useNoiseGenerator } from "./noise";
 //   return noiseGenerator(x, y, z);
 // }
 
-function getRandomHeight(params: {
-  position: THREE.Vector3,
-  minRadius: number,
-  maxRadius: number,
-  generator: NoiseGenerator,
-}, x: number, y: number): [number, number] {
+function getRandomHeight(
+  params: {
+    position: THREE.Vector3;
+    minRadius: number;
+    maxRadius: number;
+    generator: NoiseGenerator;
+  },
+  x: number,
+  y: number
+): [number, number] {
   const distance = params.position.distanceTo(new THREE.Vector3(x, y, 0));
   let normalization =
     1.0 -
@@ -30,49 +35,92 @@ function getRandomHeight(params: {
 }
 
 interface HeightGenerator {
-  get(x: number, y: number): [number, number]
+  get(x: number, y: number): [number, number];
+}
+
+const colors = {
+  WHITE: new THREE.Color(0x808080),
+  // OCEAN: new THREE.Color(0xd9d592),
+  OCEAN: new THREE.Color("blue"),
+  BEACH: new THREE.Color(0xd9d592),
+  SNOW: new THREE.Color(0xffffff),
+  FOREST_TROPICAL: new THREE.Color(0x4f9f0f),
+  FOREST_TEMPERATE: new THREE.Color(0x2b960e),
+  FOREST_BOREAL: new THREE.Color(0x29c100),
+};
+
+function chooseColor(
+  {
+    noiseGenerator,
+    splines,
+  }: {
+    noiseGenerator: NoiseGenerator;
+    splines: {
+      arid: LinearSpline;
+      humid: LinearSpline;
+    };
+  },
+  x: number,
+  y: number,
+  z: number
+) {
+  // return colors.WHITE;
+  const m = noiseGenerator.noise2D(x, z);
+  const h = y / 100.0;
+
+  if (h < 0.05) {
+    return colors.OCEAN;
+  }
+
+  const c1 = splines.arid.Get(h);
+  const c2 = splines.humid.Get(h);
+  return c1.lerpHSL(c2, m);
 }
 
 export function TerrainChunk({
   width,
   scale,
   offset,
-  // biomeGenerator,
+  splines,
+  biomeGenerator,
   heightGenerators,
 }: {
   width: number;
   scale: number;
   offset: THREE.Vector3;
   biomeGenerator: NoiseGenerator;
+  splines: {
+    arid: LinearSpline;
+    humid: LinearSpline;
+  };
   heightGenerators: HeightGenerator[];
-
 }) {
-
   const size = React.useMemo(() => {
-    return new THREE.Vector3(width * scale, 0, width * scale)
-  }, [width, scale])
+    return new THREE.Vector3(width * scale, 0, width * scale);
+  }, [width, scale]);
 
   const object = React.useMemo(() => {
     const geometry = new THREE.Mesh(
       new THREE.PlaneGeometry(size.x, size.z, 128, 128),
       new THREE.MeshStandardMaterial({
-        // wireframe: true,
-        color: 0xFFFFFF,
+        color: 0xffffff,
         side: THREE.FrontSide,
-      }))
-    geometry.position.add(offset)
+      })
+    );
+    geometry.position.add(offset);
     geometry.receiveShadow = true;
-    geometry.castShadow = false
-    geometry.material.vertexColors = true
+    geometry.castShadow = false;
+    geometry.material.vertexColors = true;
     return geometry;
   }, [size, offset]);
 
   React.useLayoutEffect(() => {
-    let position = object.geometry.getAttribute('position')
+    let position = object.geometry.getAttribute("position");
+    const colors = [];
     for (var i = 0; i < position.count; i++) {
       const heightPairs = [];
       let normalization = 0;
-      let z = 0
+      let z = 0;
       let x = position.getX(i);
       let y = position.getY(i);
 
@@ -81,59 +129,101 @@ export function TerrainChunk({
         normalization += heightPairs[heightPairs.length - 1][1];
       }
 
-
       if (normalization > 0) {
         for (let h of heightPairs) {
-          z += h[0] * h[1] / normalization;
+          z += (h[0] * h[1]) / normalization;
         }
       }
-      position.setZ(i, z)
+      position.setZ(i, z);
+      let color = chooseColor(
+        { noiseGenerator: biomeGenerator, splines },
+        x + offset.x,
+        z,
+        y + offset.y
+      );
+      colors.push(color.r, color.g, color.b);
     }
-
-
-    //   colours.push(this._ChooseColour(v.x + offset.x, v.z, v.y + offset.y));
-    // }
-
-    // for (let f of object.geometry.faces) {
-    //   const vs = [f.a, f.b, f.c];
-
-    //   const vertexColours = [];
-    //   for (let v of vs) {
-    //     vertexColours.push(colours[v]);
-    //   }
-    //   f.vertexColors = vertexColours;
-    // }
+    object.geometry.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute(colors, 3, true)
+    );
     object.geometry.attributes.position.needsUpdate = true;
     object.geometry.computeBoundingBox();
     object.geometry.computeVertexNormals();
-  }, [object, offset, heightGenerators])
-  return (
-    <primitive object={object} />
-  );
+  }, [object, offset, heightGenerators]);
+  return <primitive object={object} />;
+}
+
+function colorLerp(t: number, p0: THREE.Color, p1: THREE.Color) {
+  const c = p0.clone();
+
+  return c.lerpHSL(p1, t);
 }
 
 export function Terrain({ chunkSize = 500 }) {
-  const noise = useNoiseGenerator();
-  const biome = useNoiseGenerator();
+  const terrainNoise = useNoiseGenerator("terrain");
+  const biomeNoise = useNoiseGenerator("biome", {
+    octaves: 2,
+    persistence: 0.5,
+    lacunarity: 2.0,
+    scale: 2048.0,
+    noiseType: "simplex",
+    exponentiation: 1,
+    height: 1,
+  });
+  const splines = React.useMemo(() => {
+    const aridSpline = new LinearSpline(colorLerp);
+    const humidSpline = new LinearSpline(colorLerp);
+
+    // Arid
+    aridSpline.AddPoint(0.0, new THREE.Color(0xb7a67d));
+    aridSpline.AddPoint(0.5, new THREE.Color(0xf1e1bc));
+    aridSpline.AddPoint(1.0, colors.SNOW);
+
+    // Humid
+    humidSpline.AddPoint(0.0, colors.FOREST_BOREAL);
+    humidSpline.AddPoint(0.5, new THREE.Color(0xcee59c));
+    humidSpline.AddPoint(1.0, colors.SNOW);
+
+    return { arid: aridSpline, humid: humidSpline };
+  }, []);
   const chunks = React.useMemo(() => {
-    const offset = new THREE.Vector3(0, 0, 0)
-    const props = [{
-      offset,
-      heightGenerators: [{ get: (x: number, y: number) => getRandomHeight({ generator: noise, position: new THREE.Vector3(0, 0, 0), minRadius: 100000, maxRadius: 100000 + 1 }, x, y) }]
-    }]
+    const offset = new THREE.Vector3(0, 0, 0);
+    const props = [
+      {
+        offset,
+        heightGenerators: [
+          {
+            get: (x: number, y: number) =>
+              getRandomHeight(
+                {
+                  generator: terrainNoise,
+                  position: new THREE.Vector3(0, 0, 0),
+                  minRadius: 100000,
+                  maxRadius: 100000 + 1,
+                },
+                x,
+                y
+              ),
+          },
+        ],
+      },
+    ];
     return props;
-  }, [noise])
+  }, [terrainNoise]);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
       {chunks.map((chunk, index) => (
         <TerrainChunk
+          splines={splines}
           key={index}
           scale={1}
-          biomeGenerator={biome}
+          biomeGenerator={biomeNoise}
           width={chunkSize}
           {...chunk}
-        />))}
+        />
+      ))}
     </group>
   );
 }
