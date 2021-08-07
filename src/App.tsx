@@ -16,7 +16,7 @@ import { Board } from "./models/chess/Board";
 import { LevaPanel } from "leva";
 import { Keyboard } from "./Keyboard";
 import PlayerModel from "./models/Player";
-import { Terrain } from "./Terrain";
+import { Terrain } from "./lib/terrain/Terrain";
 
 const playEngineMove$ = atom(null, (get, set) => {
   getEngineMove(get($.engine), get($.board)).then((move) =>

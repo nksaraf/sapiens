@@ -3,35 +3,29 @@ import React from "react";
 import * as THREE from "three";
 import { Vector2 } from "three";
 import create from "zustand";
-import { $ } from "./atoms";
-import { NoiseGenerator, useNoiseGenerator } from "./lib/noise";
-import { LinearSpline } from "./lib/spline";
-
-// const terrainChunk$ = atom();
-
-// function useNoise(x, y, z) {
-//   return noiseGenerator(x, y, z);
-// }
+import { $ } from "../../atoms";
+import { NoiseGenerator, useNoiseGenerator } from "../noise";
+import { LinearSpline } from "../spline";
 
 function getRandomHeight(
   params: {
     position: THREE.Vector3;
     minRadius: number;
     maxRadius: number;
-    generator: NoiseGenerator;
+    noiseGenerator: NoiseGenerator;
   },
   x: number,
   y: number
 ): [number, number] {
-  const distance = params.position.distanceTo(new THREE.Vector3(x, y, 0));
-  let normalization =
-    1.0 -
-    math.sat(
-      (distance - params.minRadius) / (params.maxRadius - params.minRadius)
-    );
-  normalization = normalization * normalization * (3 - 2 * normalization);
+  // const distance = params.position.distanceTo(new THREE.Vector3(x, y, 0));
+  // let normalization =
+  //   1.0 -
+  //   math.sat(
+  //     (distance - params.minRadius) / (params.maxRadius - params.minRadius)
+  //   );
+  // normalization = normalization * normalization * (3 - 2 * normalization);
 
-  return [params.generator.noise2D(x!, y!), 1];
+  return [params.noiseGenerator.noise2D(x, y), 1];
 }
 
 interface HeightGenerator {
@@ -49,7 +43,7 @@ const colors = {
   FOREST_BOREAL: new THREE.Color(0x29c100),
 };
 
-function chooseColor(
+function getHyposemetricTints(
   {
     noiseGenerator,
     splines,
@@ -64,7 +58,6 @@ function chooseColor(
   y: number,
   z: number
 ) {
-  // return colors.WHITE;
   const m = noiseGenerator.noise2D(x, z);
   const h = y / 100.0;
 
@@ -82,6 +75,7 @@ export function TerrainChunk({
   scale,
   offset,
   splines,
+  material,
   biomeGenerator,
   heightGenerators,
 }: {
@@ -89,6 +83,7 @@ export function TerrainChunk({
   scale: number;
   offset: THREE.Vector3;
   biomeGenerator: NoiseGenerator;
+  material: THREE.Material;
   splines: {
     arid: LinearSpline;
     humid: LinearSpline;
@@ -102,17 +97,14 @@ export function TerrainChunk({
   const object = React.useMemo(() => {
     const geometry = new THREE.Mesh(
       new THREE.PlaneGeometry(size.x, size.z, 128, 128),
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        side: THREE.FrontSide,
-      })
+      material
     );
     geometry.position.add(offset);
     geometry.receiveShadow = true;
     geometry.castShadow = false;
     geometry.material.vertexColors = true;
     return geometry;
-  }, [size, offset]);
+  }, [size, offset, material]);
 
   React.useLayoutEffect(() => {
     let position = object.geometry.getAttribute("position");
@@ -135,7 +127,7 @@ export function TerrainChunk({
         }
       }
       position.setZ(i, z);
-      let color = chooseColor(
+      let color = getHyposemetricTints(
         { noiseGenerator: biomeGenerator, splines },
         x + offset.x,
         z,
@@ -160,8 +152,26 @@ function colorLerp(t: number, p0: THREE.Color, p1: THREE.Color) {
   return c.lerpHSL(p1, t);
 }
 
+interface HyposemetricTintsParams {
+  biomeGenerator: NoiseGenerator;
+  splines: {
+    arid: LinearSpline;
+    humid: LinearSpline;
+  };
+}
+
 export function Terrain({ chunkSize = 500 }) {
-  const terrainNoise = useNoiseGenerator("terrain");
+  
+  const terrainNoise = useNoiseGenerator("terrain", {
+    octaves: 6,
+    persistence: 0.707,
+    lacunarity: 1.8,
+    exponentiation: 4.5,
+    height: 300.0,
+    scale: 1100.0,
+    noiseType: "simplex",
+  });
+
   const biomeNoise = useNoiseGenerator("biome", {
     octaves: 2,
     persistence: 0.5,
@@ -171,22 +181,16 @@ export function Terrain({ chunkSize = 500 }) {
     exponentiation: 1,
     height: 1,
   });
-  const splines = React.useMemo(() => {
-    const aridSpline = new LinearSpline(colorLerp);
-    const humidSpline = new LinearSpline(colorLerp);
 
-    // Arid
-    aridSpline.AddPoint(0.0, new THREE.Color(0xb7a67d));
-    aridSpline.AddPoint(0.5, new THREE.Color(0xf1e1bc));
-    aridSpline.AddPoint(1.0, colors.SNOW);
+  const splines = useHyposemetricTintsSplines();
 
-    // Humid
-    humidSpline.AddPoint(0.0, colors.FOREST_BOREAL);
-    humidSpline.AddPoint(0.5, new THREE.Color(0xcee59c));
-    humidSpline.AddPoint(1.0, colors.SNOW);
-
-    return { arid: aridSpline, humid: humidSpline };
+  const material = React.useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      side: THREE.FrontSide,
+    });
   }, []);
+
   const chunks = React.useMemo(() => {
     const offset = new THREE.Vector3(0, 0, 0);
     const props = [
@@ -197,7 +201,7 @@ export function Terrain({ chunkSize = 500 }) {
             get: (x: number, y: number) =>
               getRandomHeight(
                 {
-                  generator: terrainNoise,
+                  noiseGenerator: terrainNoise,
                   position: new THREE.Vector3(0, 0, 0),
                   minRadius: 100000,
                   maxRadius: 100000 + 1,
@@ -216,6 +220,7 @@ export function Terrain({ chunkSize = 500 }) {
     <group rotation={[-Math.PI / 2, 0, 0]}>
       {chunks.map((chunk, index) => (
         <TerrainChunk
+          material={material}
           splines={splines}
           key={index}
           scale={1}
@@ -227,3 +232,29 @@ export function Terrain({ chunkSize = 500 }) {
     </group>
   );
 }
+
+class TerrainObject extends THREE.Group {
+  constructor(chunkSize: any) {
+    super();
+  }
+}
+
+function useHyposemetricTintsSplines() {
+  return React.useMemo(() => {
+    const aridSpline = new LinearSpline(colorLerp);
+    const humidSpline = new LinearSpline(colorLerp);
+
+    // Arid
+    aridSpline.AddPoint(0.0, new THREE.Color(0xb7a67d));
+    aridSpline.AddPoint(0.5, new THREE.Color(0xf1e1bc));
+    aridSpline.AddPoint(1.0, colors.SNOW);
+
+    // Humid
+    humidSpline.AddPoint(0.0, colors.FOREST_BOREAL);
+    humidSpline.AddPoint(0.5, new THREE.Color(0xcee59c));
+    humidSpline.AddPoint(1.0, colors.SNOW);
+
+    return { arid: aridSpline, humid: humidSpline };
+  }, []);
+}
+

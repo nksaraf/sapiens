@@ -11,14 +11,15 @@ export function Light() {
       <ambientLight
         {...useControls("ambientLight", {
           intensity: { value: 0.3, step: 0.1 },
-        })} />
+        })}
+      />
       <spotLight
         ref={ref}
         castShadow
         {...useControls("directionalLight", {
           position: { value: [-450, 500, -450] },
           // target: { value: [0, 0, 5] },
-          intensity: { value: 6, step: 0.1 },
+          intensity: { value: 0.4, step: 0.1 },
         })}
       ></spotLight>
     </>

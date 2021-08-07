@@ -1,5 +1,3 @@
-import { atom } from "jotai";
-import { atomFamily, useAtomValue, useUpdateAtom } from "jotai/utils";
 import { folder, useControls } from "leva";
 import React from "react";
 import SimplexNoise from "simplex-noise";
@@ -18,12 +16,6 @@ class PerlinNoise {
     return perlin.noise3(x, y, z);
   }
 }
-
-const simplex$ = atomFamily((seed: string) =>
-  atom(new SimplexNoise(seed) as NoiseGenerator)
-);
-
-const perlin$ = atom(new PerlinNoise() as NoiseGenerator);
 
 function get2DNoise(
   params: NoiseParams & { noiseGenerator: NoiseGenerator },
@@ -49,17 +41,6 @@ function get2DNoise(
   return Math.pow(total, params.exponentiation) * params.height;
 }
 
-const seed$ = atom(1);
-const noise$ = atomFamily((name: string) =>
-  atom((get) => {
-    if (name === "simplex") {
-      return get(simplex$(`${get(seed$)}`));
-    } else if (name === "perlin") {
-      return get(perlin$);
-    }
-  })
-);
-
 interface NoiseParams {
   octaves: number;
   persistence: number;
@@ -67,7 +48,18 @@ interface NoiseParams {
   exponentiation: number;
   height: number;
   scale: number;
-  noiseType: string;
+  noiseType: NoiseType;
+  seed: number;
+}
+
+type NoiseType = "simplex" | "perlin";
+
+function createNoiseFn(params: Pick<NoiseParams, "seed" | "noiseType">) {
+  if (params.noiseType === "simplex") {
+    return new SimplexNoise(params.seed.toString());
+  } else {
+    return new PerlinNoise();
+  }
 }
 
 export function useNoiseGenerator(
@@ -79,10 +71,10 @@ export function useNoiseGenerator(
     exponentiation = 4.5,
     height = 300,
     scale = 800,
+    seed = 1,
     noiseType = "simplex",
   }: Partial<NoiseParams> = {}
 ) {
-  const setSeed = useUpdateAtom(seed$);
   const controls = useControls(
     name,
     {
@@ -95,10 +87,10 @@ export function useNoiseGenerator(
           height: { min: 0, max: 512, value: height },
           scale: { min: 32, max: 4096, value: scale, step: 1 },
           noiseType: {
-            options: ["simplex", "perlin"] as const,
+            options: ["simplex", "perlin"] as NoiseType[],
             value: noiseType,
           },
-          seed: { value: 1, onChange: (value) => setSeed(value) },
+          seed: { value: seed },
         },
         { collapsed: true }
       ),
@@ -106,7 +98,14 @@ export function useNoiseGenerator(
     { collapsed: true }
   );
 
-  const noiseFn = useAtomValue(noise$(controls.noiseType))!;
+  const noiseFn = React.useMemo(
+    () =>
+      createNoiseFn({
+        noiseType: controls.noiseType,
+        seed: controls.seed,
+      }),
+    [controls.seed, controls.noiseType]
+  );
 
   const generator = React.useMemo(() => {
     return {
@@ -124,7 +123,15 @@ export function useNoiseGenerator(
         return 0;
       },
     } as NoiseGenerator;
-  }, [noiseFn, controls]);
+  }, [
+    noiseFn,
+    controls.height,
+    controls.scale,
+    controls.octaves,
+    controls.lacunarity,
+    controls.exponentiation,
+    controls.persistence,
+  ]);
 
   return generator;
 }
