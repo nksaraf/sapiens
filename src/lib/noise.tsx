@@ -41,7 +41,7 @@ function get2DNoise(
   return Math.pow(total, params.exponentiation) * params.height;
 }
 
-interface NoiseParams {
+export interface NoiseParams {
   octaves: number;
   persistence: number;
   lacunarity: number;

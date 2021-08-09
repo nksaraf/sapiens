@@ -1,8 +1,15 @@
+import { NoiseGenerator, NoiseParams } from "@/noise";
+import { LinearSpline } from "@/spline";
+import * as THREE from "three";
+
 interface TerrainChunkParams {
   width: number;
   scale: number;
   offset: THREE.Vector3;
   biomeGenerator: NoiseGenerator;
+  biomeParams: NoiseParams;
+  colorGenerator: NoiseGenerator;
+  colorParams: NoiseParams;
   material: THREE.Material;
   splines: {
     arid: LinearSpline;
@@ -12,6 +19,7 @@ interface TerrainChunkParams {
   radius: number;
   group: THREE.Group;
   heightGenerators: HeightGenerator[];
+  heightNoiseParams: NoiseParams;
 }
 
 class TerrainChunk {

@@ -7,26 +7,7 @@ import { $ } from "../../atoms";
 import { NoiseGenerator, useNoiseGenerator } from "../noise";
 import { LinearSpline } from "../spline";
 
-function getRandomHeight(
-  params: {
-    position: THREE.Vector3;
-    minRadius: number;
-    maxRadius: number;
-    noiseGenerator: NoiseGenerator;
-  },
-  x: number,
-  y: number
-): [number, number] {
-  // const distance = params.position.distanceTo(new THREE.Vector3(x, y, 0));
-  // let normalization =
-  //   1.0 -
-  //   math.sat(
-  //     (distance - params.minRadius) / (params.maxRadius - params.minRadius)
-  //   );
-  // normalization = normalization * normalization * (3 - 2 * normalization);
 
-  return [params.noiseGenerator.noise2D(x, y), 1];
-}
 
 interface HeightGenerator {
   get(x: number, y: number): [number, number];
