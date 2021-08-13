@@ -202,7 +202,7 @@ function getCellIndex(p: THREE.Vector3) {
   const yp = p.y + _MIN_CELL_SIZE * 0.5;
   const x = Math.floor(xp / _MIN_CELL_SIZE);
   const z = Math.floor(yp / _MIN_CELL_SIZE);
-  return [x, -z];
+  return [x, z];
 }
 
 function Terrain({ chunkSize = 500, resolution = 64 }) {
@@ -242,8 +242,8 @@ function Terrain({ chunkSize = 500, resolution = 64 }) {
         return (
           <TerrainMesh
             key={`${x}.${y}`}
-            offset={[chunkSize * x, -chunkSize * y, 0]}
-            position={[chunkSize * x, -chunkSize * y, 0]}
+            offset={[chunkSize * x, chunkSize * y, 0]}
+            position={[chunkSize * x, chunkSize * y, 0]}
             width={chunkSize}
             height={chunkSize}
             resolution={resolution}
