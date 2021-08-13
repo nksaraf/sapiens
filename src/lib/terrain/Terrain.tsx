@@ -6,12 +6,7 @@ import create from "zustand";
 import { $ } from "../../atoms";
 import { NoiseGenerator, useNoiseGenerator } from "../noise";
 import { LinearSpline } from "../spline";
-
-
-
-interface HeightGenerator {
-  get(x: number, y: number): [number, number];
-}
+import { NoisyHeightGenerator } from "./HeightGenerator";
 
 const colors = {
   WHITE: new THREE.Color(0x808080),
@@ -39,7 +34,7 @@ function getHyposemetricTints(
   y: number,
   z: number
 ) {
-  const m = noiseGenerator.noise2D(x, z);
+  const m = noiseGenerator.get(x, z);
   const h = y / 100.0;
 
   if (h < 0.05) {
@@ -69,7 +64,7 @@ export function TerrainChunk({
     arid: LinearSpline;
     humid: LinearSpline;
   };
-  heightGenerators: HeightGenerator[];
+  heightGenerators: NoisyHeightGenerator[];
 }) {
   const size = React.useMemo(() => {
     return new THREE.Vector3(width * scale, 0, width * scale);
@@ -142,7 +137,6 @@ interface HyposemetricTintsParams {
 }
 
 export function Terrain({ chunkSize = 500 }) {
-  
   const terrainNoise = useNoiseGenerator("terrain", {
     octaves: 6,
     persistence: 0.707,
@@ -177,21 +171,7 @@ export function Terrain({ chunkSize = 500 }) {
     const props = [
       {
         offset,
-        heightGenerators: [
-          {
-            get: (x: number, y: number) =>
-              getRandomHeight(
-                {
-                  noiseGenerator: terrainNoise,
-                  position: new THREE.Vector3(0, 0, 0),
-                  minRadius: 100000,
-                  maxRadius: 100000 + 1,
-                },
-                x,
-                y
-              ),
-          },
-        ],
+        heightGenerators: [new NoisyHeightGenerator(terrainNoise)],
       },
     ];
     return props;
@@ -238,4 +218,3 @@ function useHyposemetricTintsSplines() {
     return { arid: aridSpline, humid: humidSpline };
   }, []);
 }
-

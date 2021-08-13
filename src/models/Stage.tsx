@@ -56,7 +56,6 @@ export function Stage({
 }: Props) {
   const config = presets[preset];
   const camera = useThree((state) => state.camera);
-  console.log(camera);
   // @ts-expect-error new in @react-three/fiber@7.0.5
   const defaultControls = useThree((state) => state.controls) as ControlsProto;
   const outer = React.useRef<THREE.Group>(null!);

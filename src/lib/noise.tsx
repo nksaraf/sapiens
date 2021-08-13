@@ -1,14 +1,15 @@
+import { extend, Node } from "@react-three/fiber";
 import { folder, useControls } from "leva";
 import React from "react";
 import SimplexNoise from "simplex-noise";
 import * as perlin from "./perlin";
 
-export interface NoiseGenerator {
+export interface NoiseFunction {
   noise2D(x: number, y: number): number;
   noise3D(x: number, y: number, z: number): number;
 }
 
-class PerlinNoise {
+class PerlinNoise implements NoiseFunction {
   noise2D(x: number, y: number): number {
     return perlin.noise2(x, y);
   }
@@ -17,8 +18,88 @@ class PerlinNoise {
   }
 }
 
+export class NoiseGenerator {
+  noise: Record<string, NoiseFunction>;
+  octaves!: number;
+  persistence!: number;
+  lacunarity!: number;
+  exponentiation!: number;
+  height!: number;
+  scale!: number;
+  noiseType!: NoiseType;
+  _seed!: number;
+
+  constructor(
+    params: NoiseParams = {
+      octaves: 6,
+      persistence: 0.707,
+      lacunarity: 1.8,
+      exponentiation: 4.5,
+      height: 300,
+      scale: 800,
+      seed: 1,
+      noiseType: "simplex",
+    }
+  ) {
+    this.noise = {};
+    this.noise["simplex"] = new SimplexNoise(`${params.seed}`);
+    this.noise["perlin"] = new PerlinNoise();
+    this.params = params;
+  }
+
+  get params() {
+    return {
+      octaves: this.octaves,
+      persistence: this.persistence,
+      lacunarity: this.lacunarity,
+      exponentiation: this.exponentiation,
+      height: this.height,
+      scale: this.scale,
+      seed: this.seed,
+      noiseType: this.noiseType,
+    };
+  }
+
+  set seed(value: number) {
+    this._seed = value;
+    this.noise["simplex"] = new SimplexNoise(`${value}`);
+  }
+
+  get seed() {
+    return this._seed;
+  }
+
+  set params(params: NoiseParams) {
+    this.octaves = params.octaves;
+    this.persistence = params.persistence;
+    this.lacunarity = params.lacunarity;
+    this.exponentiation = params.exponentiation;
+    this.height = params.height;
+    this.scale = params.scale;
+    this.noiseType = params.noiseType;
+    this.seed = params.seed;
+  }
+
+  get(x: number, y: number, z?: number): number {
+    if (z === undefined) {
+      return get2DNoise(
+        { ...this.params, noiseFunction: this.noise[this.noiseType] },
+        x,
+        y
+      );
+    } else {
+      return get3DNoise(
+        { ...this.params, noiseFunction: this.noise[this.noiseType] },
+        x,
+        y,
+        z
+      );
+    }
+  }
+}
+
 function get2DNoise(
-  params: NoiseParams & { noiseGenerator: NoiseGenerator },
+  params: NoiseParams & { noiseFunction: NoiseFunction },
   x: number,
   y: number
 ) {
@@ -31,7 +112,41 @@ function get2DNoise(
   let total = 0;
   for (let o = 0; o < params.octaves; o++) {
     const noiseValue =
-      params.noiseGenerator.noise2D(xs * frequency, ys * frequency) * 0.5 + 0.5;
+      params.noiseFunction.noise2D(xs * frequency, ys * frequency) * 0.5 + 0.5;
+    total += noiseValue * amplitude;
+    normalization += amplitude;
+    amplitude *= G;
+    frequency *= params.lacunarity;
+  }
+  total /= normalization;
+  return Math.pow(total, params.exponentiation) * params.height;
+}
+
+function get3DNoise(
+  params: NoiseParams & { noiseFunction: NoiseFunction },
+  x: number,
+  y: number,
+  z: number
+) {
+  const G = 2.0 ** -params.persistence;
+  const xs = x / params.scale;
+  const ys = y / params.scale;
+  const zs = z / params.scale;
+
+  let amplitude = 1.0;
+  let frequency = 1.0;
+  let normalization = 0;
+  let total = 0;
+  for (let o = 0; o < params.octaves; o++) {
+    const noiseValue =
+      params.noiseFunction.noise3D(
+        xs * frequency,
+        ys * frequency,
+        zs * frequency
+      ) *
+        0.5 +
+      0.5;
+
     total += noiseValue * amplitude;
     normalization += amplitude;
     amplitude *= G;
@@ -52,7 +167,7 @@ export interface NoiseParams {
   seed: number;
 }
 
-type NoiseType = "simplex" | "perlin";
+export type NoiseType = "simplex" | "perlin";
 
 function createNoiseFn(params: Pick<NoiseParams, "seed" | "noiseType">) {
   if (params.noiseType === "simplex") {
@@ -78,60 +193,78 @@ export function useNoiseGenerator(
   const controls = useControls(
     name,
     {
-      noise: folder(
-        {
-          octaves: { value: octaves, step: 1, min: 1, max: 20 },
-          persistence: { value: persistence, min: 0.25, max: 1.0 },
-          lacunarity: { min: 0.01, max: 4.0, value: lacunarity },
-          exponentiation: { min: 0.1, max: 10.0, value: exponentiation },
-          height: { min: 0, max: 512, value: height },
-          scale: { min: 32, max: 4096, value: scale, step: 1 },
-          noiseType: {
-            options: ["simplex", "perlin"] as NoiseType[],
-            value: noiseType,
-          },
-          seed: { value: seed },
+      noise: folder({
+        octaves: { value: octaves, step: 1, min: 1, max: 20 },
+        persistence: { value: persistence, min: 0.25, max: 1.0 },
+        lacunarity: { min: 0.01, max: 4.0, value: lacunarity },
+        exponentiation: { min: 0.1, max: 10.0, value: exponentiation },
+        height: { min: 0, value: height },
+        scale: { min: 32, max: 4096, value: scale, step: 1 },
+        noiseType: {
+          options: ["simplex", "perlin"] as NoiseType[],
+          value: noiseType,
         },
-        { collapsed: true }
-      ),
+        seed: { value: seed },
+      }),
     },
     { collapsed: true }
   );
 
-  const noiseFn = React.useMemo(
-    () =>
-      createNoiseFn({
-        noiseType: controls.noiseType,
-        seed: controls.seed,
-      }),
-    [controls.seed, controls.noiseType]
-  );
-
   const generator = React.useMemo(() => {
-    return {
-      noise2D(x: number, y: number) {
-        return get2DNoise(
-          {
-            ...controls,
-            noiseGenerator: noiseFn,
-          },
-          x,
-          y
-        );
-      },
-      noise3D(x: number, y: number, z: number) {
-        return 0;
-      },
-    } as NoiseGenerator;
-  }, [
-    noiseFn,
-    controls.height,
-    controls.scale,
-    controls.octaves,
-    controls.lacunarity,
-    controls.exponentiation,
-    controls.persistence,
-  ]);
+    return new NoiseGenerator(controls) as NoiseGenerator;
+  }, [controls]);
 
   return generator;
+}
+
+extend({ NoiseGenerator });
+type NoiseGeneratorProps = Node<NoiseGenerator, typeof NoiseGenerator>;
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      noiseGenerator: NoiseGeneratorProps;
+    }
+  }
+}
+
+export function Noise(props: NoiseGeneratorProps & { name: string }) {
+  const {
+    octaves = 6,
+    persistence = 0.707,
+    lacunarity = 1.8,
+    exponentiation = 4.5,
+    height = 300,
+    scale = 800,
+    seed = 1,
+    noiseType = "simplex",
+  } = props;
+
+  const { noiseType: controlledNoiseType, ...noiseControls } = useControls(
+    props.name,
+    {
+      noise: folder({
+        octaves: { value: octaves, step: 1, min: 1, max: 20 },
+        persistence: { value: persistence, min: 0.25, max: 1.0 },
+        lacunarity: { min: 0.01, max: 4.0, value: lacunarity },
+        exponentiation: { min: 0.1, max: 10.0, value: exponentiation },
+        height: { min: 0, value: height },
+        scale: { min: 32, max: 4096, value: scale, step: 1 },
+        noiseType: {
+          options: ["simplex", "perlin"] as NoiseType[],
+          value: noiseType,
+        },
+        seed: { value: seed },
+      }),
+    },
+    { collapsed: true }
+  );
+
+  return (
+    <noiseGenerator
+      attach="noiseGenerator"
+      {...props}
+      noiseType={controlledNoiseType as NoiseType}
+      {...noiseControls}
+    />
+  );
 }

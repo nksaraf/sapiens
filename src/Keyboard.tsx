@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import create from "zustand";
+import { combine } from "zustand/middleware";
 import { useCharacter } from "./atoms";
 
 interface KeyConfig extends KeyMap {
@@ -45,8 +47,24 @@ function useKeys(keyConfig: KeyConfig[]) {
   }, [keyConfig]);
 }
 
+export const useInput = create(
+  combine(
+    {
+      controls: {
+        left: false,
+        right: false,
+        forward: false,
+        backward: false,
+        shift: false,
+        space: false,
+      },
+    },
+    (set, get) => ({ get, set })
+  )
+);
+
 export function Keyboard() {
-  const set = useCharacter((s) => s.set);
+  const set = useInput((s) => s.set);
   useKeys([
     {
       keys: ["ArrowUp", "w", "W", "z", "Z"],

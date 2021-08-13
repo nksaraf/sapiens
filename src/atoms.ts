@@ -107,14 +107,7 @@ const gltfAsset$ = atomFamily((path: string) =>
 
 export const useCharacter = create(combine({
   state: 'idle' as 'idle' | 'walk' | 'run' | 'attack',
-  controls: {
-    left: false,
-    right: false,
-    forward: false,
-    backward: false,
-    shift: false,
-    space: false,
-  }
+
 }, (set, get, api) => ({
   // dispatch: (action: { type: 'MOVE' } | { type: 'KEYPRESS_FORWARD_IN' } | { type: 'KEYPRESS_FORWARD_OUT' } | { type: 'BACKWARD' }) => {
   //   let prevState = get();

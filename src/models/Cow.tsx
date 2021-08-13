@@ -61,6 +61,7 @@ import { Loader } from "three";
 // @ts-ignore
 import { GLTFLoader, DRACOLoader, MeshoptDecoder } from "three-stdlib";
 import { useFrame, useGraph, useLoader } from "@react-three/fiber";
+import { useInput } from "src/Keyboard";
 
 function onEnter<T extends string>(
   state: T,
@@ -108,7 +109,8 @@ export function Character() {
   }
 
   useFrame(() => {
-    const { state, controls } = useCharacter.getState();
+    const { state } = useCharacter.getState();
+    const { controls } = useInput.getState();
 
     var nextState = state;
 

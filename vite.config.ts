@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [reactRefresh(), windicss(), tsconfigPaths()],
   server: {
     hmr: {
-      port: 443
+      // port: 443
     }
   }
 });

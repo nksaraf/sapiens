@@ -1,57 +1,53 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.112.1/build/three.module.js";
+import { NoiseGenerator } from "@/noise";
+import * as THREE from "three";
+import { TextureSplatter } from "@/terrain/TextureSplatter";
+import { NoisyHeightGenerator } from "@/terrain/HeightGenerator";
+import { TerrainChunkParams, TerrainChunkRawParams } from "@/terrain/TerrainChunk";
+import * as Comlink from 'comlink';
 
-import { noise } from "./noise.js";
-import { texture_splatter } from "./texture-splatter.js";
+Comlink.expose(NoiseGenerator);
 
-class _TerrainBuilderThreadedWorker {
-  _params: {
-    offset: any[];
-    noiseParams: any;
-    heightGeneratorsParams: {
-      min: any;
-      max: any;
-    };
-    biomesParams: any;
-    colourNoiseParams: any;
-  };
-  constructor() {}
+type TerrainChunkWorkerParams = Omit<TerrainChunkRawParams, 'offset'> & {
+  offset: [number, number, number];
+  worldMatrix: THREE.Matrix4;
+}
 
-  Init(params: {
-    offset: any[];
-    noiseParams: any;
-    heightGeneratorsParams: { min: any; max: any };
-    biomesParams: any;
-    colourNoiseParams: any;
-  }) {
-    this._params = params;
-    this._params.offset = new THREE.Vector3(
-      params.offset[0],
-      params.offset[1],
-      params.offset[2]
-    );
-    this._params.noise = new noise.Noise(params.noiseParams);
-    this._params.heightGenerators = [
-      new texture_splatter.HeightGenerator(
-        this._params.noise,
-        params.offset,
-        params.heightGeneratorsParams.min,
-        params.heightGeneratorsParams.max
+class TerrainChunkRebuilder {
+
+}
+
+class TerrainBuilderThreadedWorker {
+  params?: Omit<TerrainChunkParams, 'group'> & { worldMatrix: THREE.Matrix4 };
+
+  init(params: TerrainChunkWorkerParams) {
+    let biomeNoiseGenerator = new NoiseGenerator(params.biomeNoiseParams)
+    let colorNoiseGenerator = new NoiseGenerator(params.colorNoiseParams)
+    let heightNoiseGenerator = new NoiseGenerator(params.heightNoiseParams);
+
+    this.params = {
+      ...params,
+      offset: new THREE.Vector3(
+        params.offset[0],
+        params.offset[1],
+        params.offset[2]
       ),
-    ];
-
-    this._params.biomeGenerator = new noise.Noise(params.biomesParams);
-    this._params.colourNoise = new noise.Noise(params.colourNoiseParams);
-    this._params.colourGenerator = new texture_splatter.TextureSplatter({
-      biomeGenerator: this._params.biomeGenerator,
-      colourNoise: this._params.colourNoise,
-    });
+      biomeNoiseGenerator,
+      colorNoiseGenerator,
+      heightNoiseGenerator,
+      textureSplatter: new TextureSplatter({
+        biomeNoiseGenerator,
+        colorNoiseGenerator,
+      }),
+      heightGenerators: [new NoisyHeightGenerator(heightNoiseGenerator)],
+    }
   }
 
-  _GenerateHeight(v: { x: any; y: any; z: any }) {
-    return this._params.heightGenerators[0].Get(v.x, v.y, v.z)[0];
+  generateHeight(v: THREE.Vector3) {
+    return this.params!.heightGenerators[0].get(v.x, v.y, v.z)[0];
   }
 
-  Rebuild() {
+  rebuild() {
+    let params = this.params!
     const _D = new THREE.Vector3();
     const _D1 = new THREE.Vector3();
     const _D2 = new THREE.Vector3();
@@ -76,11 +72,11 @@ class _TerrainBuilderThreadedWorker {
     const indices: number[] = [];
     const wsPositions = [];
 
-    const localToWorld = this._params.worldMatrix;
-    const resolution = this._params.resolution;
-    const radius = this._params.radius;
-    const offset = this._params.offset;
-    const width = this._params.width;
+    const localToWorld = params.worldMatrix;
+    const resolution = params.resolution;
+    const radius = params.radius;
+    const offset = params.offset;
+    const width = params.width;
     const half = width / 2;
 
     for (let x = 0; x < resolution + 1; x++) {
@@ -100,7 +96,7 @@ class _TerrainBuilderThreadedWorker {
         _W.copy(_P);
         _W.applyMatrix4(localToWorld);
 
-        const height = this._GenerateHeight(_W);
+        const height = this.generateHeight(_W);
 
         // Purturb height along z-vector
         _H.copy(_D);
@@ -109,9 +105,8 @@ class _TerrainBuilderThreadedWorker {
 
         positions.push(_P.x, _P.y, _P.z);
 
-        _S.set(_W.x, _W.y, height);
 
-        const color = this._params.colourGenerator.GetColour(_S);
+        const color = params.textureSplatter.getColor(_W.x, _W.y, height);
         colors.push(color.r, color.g, color.b);
         normals.push(_D.x, _D.y, _D.z);
         tangents.push(1, 0, 0, 1);
@@ -183,17 +178,18 @@ class _TerrainBuilderThreadedWorker {
         _P.fromArray(wsPositions, j1);
         _N.fromArray(normals, j1);
         _D.fromArray(up, j1);
-        const s = this._params.colourGenerator.GetSplat(_P, _N, _D);
+        const s = params.textureSplatter.getSplat(_P.x, _P.y, _P.z);
         splats.push(s);
       }
 
-      const splatStrengths = {};
+      type SplatType = keyof typeof splats[0]
+      const splatStrengths = {} as Record<SplatType, any>;
       for (let k in splats[0]) {
-        splatStrengths[k] = { key: k, strength: 0.0 };
+        splatStrengths[k as SplatType] = { key: k, strength: 0.0 };
       }
       for (let curSplat of splats) {
         for (let k in curSplat) {
-          splatStrengths[k].strength += curSplat[k].strength;
+          splatStrengths[k as SplatType].strength += curSplat[k as SplatType].strength;
         }
       }
 
@@ -214,47 +210,47 @@ class _TerrainBuilderThreadedWorker {
 
       for (let s = 0; s < 3; s++) {
         let total =
-          splats[s][typeValues[0].key].strength +
-          splats[s][typeValues[1].key].strength +
-          splats[s][typeValues[2].key].strength +
-          splats[s][typeValues[3].key].strength;
+          splats[s][typeValues[0].key as SplatType as SplatType].strength +
+          splats[s][typeValues[1].key as SplatType as SplatType].strength +
+          splats[s][typeValues[2].key as SplatType as SplatType].strength +
+          splats[s][typeValues[3].key as SplatType as SplatType].strength;
         const normalization = 1.0 / total;
 
-        splats[s][typeValues[0].key].strength *= normalization;
-        splats[s][typeValues[1].key].strength *= normalization;
-        splats[s][typeValues[2].key].strength *= normalization;
-        splats[s][typeValues[3].key].strength *= normalization;
+        splats[s][typeValues[0].key as SplatType].strength *= normalization;
+        splats[s][typeValues[1].key as SplatType].strength *= normalization;
+        splats[s][typeValues[2].key as SplatType].strength *= normalization;
+        splats[s][typeValues[3].key as SplatType].strength *= normalization;
       }
 
-      weights1.push(splats[0][typeValues[3].key].index);
-      weights1.push(splats[0][typeValues[2].key].index);
-      weights1.push(splats[0][typeValues[1].key].index);
-      weights1.push(splats[0][typeValues[0].key].index);
+      weights1.push(splats[0][typeValues[3].key as SplatType].index);
+      weights1.push(splats[0][typeValues[2].key as SplatType].index);
+      weights1.push(splats[0][typeValues[1].key as SplatType].index);
+      weights1.push(splats[0][typeValues[0].key as SplatType].index);
 
-      weights1.push(splats[1][typeValues[3].key].index);
-      weights1.push(splats[1][typeValues[2].key].index);
-      weights1.push(splats[1][typeValues[1].key].index);
-      weights1.push(splats[1][typeValues[0].key].index);
+      weights1.push(splats[1][typeValues[3].key as SplatType].index);
+      weights1.push(splats[1][typeValues[2].key as SplatType].index);
+      weights1.push(splats[1][typeValues[1].key as SplatType].index);
+      weights1.push(splats[1][typeValues[0].key as SplatType].index);
 
-      weights1.push(splats[2][typeValues[3].key].index);
-      weights1.push(splats[2][typeValues[2].key].index);
-      weights1.push(splats[2][typeValues[1].key].index);
-      weights1.push(splats[2][typeValues[0].key].index);
+      weights1.push(splats[2][typeValues[3].key as SplatType].index);
+      weights1.push(splats[2][typeValues[2].key as SplatType].index);
+      weights1.push(splats[2][typeValues[1].key as SplatType].index);
+      weights1.push(splats[2][typeValues[0].key as SplatType].index);
 
-      weights2.push(splats[0][typeValues[3].key].strength);
-      weights2.push(splats[0][typeValues[2].key].strength);
-      weights2.push(splats[0][typeValues[1].key].strength);
-      weights2.push(splats[0][typeValues[0].key].strength);
+      weights2.push(splats[0][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[0].key as SplatType].strength);
 
-      weights2.push(splats[1][typeValues[3].key].strength);
-      weights2.push(splats[1][typeValues[2].key].strength);
-      weights2.push(splats[1][typeValues[1].key].strength);
-      weights2.push(splats[1][typeValues[0].key].strength);
+      weights2.push(splats[1][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[0].key as SplatType].strength);
 
-      weights2.push(splats[2][typeValues[3].key].strength);
-      weights2.push(splats[2][typeValues[2].key].strength);
-      weights2.push(splats[2][typeValues[1].key].strength);
-      weights2.push(splats[2][typeValues[0].key].strength);
+      weights2.push(splats[2][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[0].key as SplatType].strength);
     }
 
     function _Unindex(src: any[], stride: number) {
@@ -327,13 +323,13 @@ class _TerrainBuilderThreadedWorker {
   }
 }
 
-const _CHUNK = new _TerrainBuilderThreadedWorker();
+const builder = new TerrainBuilderThreadedWorker();
 
 self.onmessage = (msg) => {
   if (msg.data.subject == "build_chunk") {
-    _CHUNK.Init(msg.data.params);
+    builder.init(msg.data.params);
 
-    const rebuiltData = _CHUNK.Rebuild();
+    const rebuiltData = builder.rebuild();
     self.postMessage({ subject: "build_chunk_result", data: rebuiltData });
   }
 };

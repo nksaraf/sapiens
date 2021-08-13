@@ -14,9 +14,10 @@ import { Light } from "./Light";
 import { Character } from "./models/Cow";
 import { Board } from "./models/chess/Board";
 import { LevaPanel } from "leva";
-import { Keyboard } from "./Keyboard";
+import { Keyboard, useInput } from "./Keyboard";
 import PlayerModel from "./models/Player";
 import { Terrain } from "./lib/terrain/Terrain";
+import TerrainDemo from "@/terrain/Demo";
 
 const playEngineMove$ = atom(null, (get, set) => {
   getEngineMove(get($.engine), get($.board)).then((move) =>
@@ -75,8 +76,9 @@ function GameCamera() {
       <Camera
         name="camera1"
         camera="perspective"
-        position={[0, 300, 450]}
+        position={[0, 500, 450]}
         fov={60}
+        far={10000}
         onUpdate={(camera) => camera.lookAt(0, 0, 0)}
         makeDefault={controls.defaultCamera === "camera1"}
       />
@@ -103,7 +105,7 @@ export function App() {
           {/* <Suspense fallback={null}>
             <StockfishEngine />
           </Suspense> */}
-          <Terrain />
+          <TerrainDemo />
           {/* <UI /> */}
           <Keyboard />
           <Light />
@@ -179,7 +181,7 @@ function Avatar() {
 function Debugger() {
   return (
     <pre className="fixed bottom-2 right-2">
-      {JSON.stringify(useCharacter((s) => s.controls))}
+      {JSON.stringify(useInput((s) => s.controls))}
     </pre>
   );
 }

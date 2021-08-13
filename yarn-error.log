@@ -1,8 +1,8 @@
 Arguments: 
-  /Users/nikhilsaraf/.fnm/node-versions/v14.15.1/installation/bin/node /usr/local/Cellar/yarn/1.22.10/libexec/bin/yarn.js add es-perlin-module
+  /Users/nikhilsaraf/.fnm/node-versions/v14.15.1/installation/bin/node /usr/local/Cellar/yarn/1.22.10/libexec/bin/yarn.js add comlink
 
 PATH: 
-  /var/folders/vy/5v99851s36lfnhhyv0xnzr1r0000gn/T/fnm_multishells/55877_1628011449257/bin:~/.deno/bin:/Users/nikhilsaraf/.fnm:/usr/local/opt/maven@3.5/bin:/usr/local/opt/openjdk@8/libexec/openjdk.jdk/Contents/Home/bin:/Users/nikhilsaraf/garage/go/bin:/Users/nikhilsaraf/.deno/bin:/Users/nikhilsaraf/Library/Caches/.wasm-pack/.wasm-bindgen-cargo-install-0.2.74/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/usr/local/share/dotnet:~/.dotnet/tools:/Library/Apple/usr/bin:/var/folders/vy/5v99851s36lfnhhyv0xnzr1r0000gn/T/fnm_multishells/55734_1628011446882/bin:~/.deno/bin:/Users/nikhilsaraf/.fnm:/usr/local/opt/maven@3.5/bin:/usr/local/opt/openjdk@8/libexec/openjdk.jdk/Contents/Home/bin:/Users/nikhilsaraf/garage/go/bin:/Users/nikhilsaraf/.deno/bin:/Users/nikhilsaraf/Library/Caches/.wasm-pack/.wasm-bindgen-cargo-install-0.2.74/bin:/Users/nikhilsaraf/.cargo/bin:/Users/nikhilsaraf/.fig/bin
+  /var/folders/vy/5v99851s36lfnhhyv0xnzr1r0000gn/T/fnm_multishells/15714_1628524503912/bin:~/.deno/bin:/Users/nikhilsaraf/.fnm:/usr/local/opt/maven@3.5/bin:/usr/local/opt/openjdk@8/libexec/openjdk.jdk/Contents/Home/bin:/Users/nikhilsaraf/garage/go/bin:/Users/nikhilsaraf/.deno/bin:/Users/nikhilsaraf/Library/Caches/.wasm-pack/.wasm-bindgen-cargo-install-0.2.74/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/usr/local/share/dotnet:~/.dotnet/tools:/Library/Apple/usr/bin:/var/folders/vy/5v99851s36lfnhhyv0xnzr1r0000gn/T/fnm_multishells/15568_1628524501133/bin:~/.deno/bin:/Users/nikhilsaraf/.fnm:/usr/local/opt/maven@3.5/bin:/usr/local/opt/openjdk@8/libexec/openjdk.jdk/Contents/Home/bin:/Users/nikhilsaraf/garage/go/bin:/Users/nikhilsaraf/.deno/bin:/Users/nikhilsaraf/Library/Caches/.wasm-pack/.wasm-bindgen-cargo-install-0.2.74/bin:/Users/nikhilsaraf/.cargo/bin:/Users/nikhilsaraf/.fig/bin
 
 Yarn version: 
   1.22.10
@@ -14,17 +14,8 @@ Platform:
   darwin x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/es-perlin-module: Not found
-      at Request.params.callback [as _callback] (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:66988:18)
-      at Request.self.callback (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:140749:22)
-      at Request.emit (events.js:315:20)
-      at Request.<anonymous> (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:141721:10)
-      at Request.emit (events.js:315:20)
-      at IncomingMessage.<anonymous> (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:141643:12)
-      at Object.onceWrapper (events.js:421:28)
-      at IncomingMessage.emit (events.js:327:22)
-      at endReadableNT (_stream_readable.js:1327:12)
-      at processTicksAndRejections (internal/process/task_queues.js:80:21)
+  Error: getaddrinfo ENOTFOUND registry.yarnpkg.com
+      at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:67:26)
 
 npm manifest: 
   {

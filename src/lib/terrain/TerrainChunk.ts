@@ -1,50 +1,54 @@
 import { NoiseGenerator, NoiseParams } from "@/noise";
-import { LinearSpline } from "@/spline";
 import * as THREE from "three";
+import { TextureSplatter } from "./TextureSplatter";
+import { HeightGenerator } from "./HeightGenerator";
 
-interface TerrainChunkParams {
+export interface TerrainChunkRawParams {
   width: number;
   scale: number;
   offset: THREE.Vector3;
-  biomeGenerator: NoiseGenerator;
-  biomeParams: NoiseParams;
-  colorGenerator: NoiseGenerator;
-  colorParams: NoiseParams;
+  biomeNoiseParams: NoiseParams;
+  colorNoiseParams: NoiseParams;
   material: THREE.Material;
-  splines: {
-    arid: LinearSpline;
-    humid: LinearSpline;
-  };
   resolution: number;
   radius: number;
-  group: THREE.Group;
-  heightGenerators: HeightGenerator[];
   heightNoiseParams: NoiseParams;
 }
 
-class TerrainChunk {
-  _params: TerrainChunkParams;
+export interface TerrainChunkParams extends TerrainChunkRawParams {
+  biomeNoiseGenerator: NoiseGenerator;
+  textureSplatter: TextureSplatter;
+  heightNoiseGenerator: NoiseGenerator;
+  colorNoiseGenerator: NoiseGenerator;
+  material: THREE.Material;
+  group: THREE.Group;
+  heightGenerators: HeightGenerator[];
+}
+
+export class TerrainChunk extends THREE.Mesh {
+  params: TerrainChunkParams;
   geometry: THREE.BufferGeometry;
-  mesh: THREE.Mesh;
 
   constructor(params: TerrainChunkParams) {
-    this._params = params;
-    this.geometry = new THREE.BufferGeometry();
-    this.mesh = new THREE.Mesh(this.geometry, params.material);
-    this.mesh.castShadow = false;
-    this.mesh.receiveShadow = true;
+    let geometry = new THREE.BufferGeometry();
+    super(geometry, params.material);
+    this.params = params;
+    this.geometry = geometry;
+    this.castShadow = false;
+    this.receiveShadow = true;
+    this.params.group.add(this);
   }
 
-  Destroy() {
-    this._params.group.remove(this.mesh);
+  destroy() {
+    this.params.group.remove(this);
   }
 
   hide() {
-    this.mesh.visible = false;
+    this.visible = false;
   }
 
   show() {
-    this.mesh.visible = true;
+    this.visible = true;
   }
 
   rebuildMeshFromData(data: {
@@ -87,7 +91,7 @@ class TerrainChunk {
   }
 
   generateHeight(v: THREE.Vector3) {
-    return this._params.heightGenerators[0].Get(v.x, v.y, v.z)[0];
+    return this.params.heightGenerators[0].get(v.x, v.y, v.z)[0];
   }
 
   *rebuild() {
@@ -97,8 +101,8 @@ class TerrainChunk {
     const _P = new THREE.Vector3();
     const _H = new THREE.Vector3();
     const _W = new THREE.Vector3();
-    const _C = new THREE.Vector3();
-    const _S = new THREE.Vector3();
+    // const _C = new THREE.Vector3();
+    // const _S = new THREE.Vector3();
 
     const _N = new THREE.Vector3();
     const _N1 = new THREE.Vector3();
@@ -115,11 +119,11 @@ class TerrainChunk {
     const indices: number[] = [];
     const wsPositions = [];
 
-    const localToWorld = this._params.group.matrix;
-    const resolution = this._params.resolution;
-    const radius = this._params.radius;
-    const offset = this._params.offset;
-    const width = this._params.width;
+    const localToWorld = this.params.group.matrix;
+    const resolution = this.params.resolution;
+    const radius = this.params.radius;
+    const offset = this.params.offset;
+    const width = this.params.width;
     const half = width / 2;
 
     for (let x = 0; x < resolution + 1; x++) {
@@ -148,9 +152,7 @@ class TerrainChunk {
 
         positions.push(_P.x, _P.y, _P.z);
 
-        _S.set(_W.x, _W.y, height);
-
-        const color = this._params.colourGenerator.GetColour(_S);
+        const color = this.params.textureSplatter.getColor(_W.x, _W.y, height);
         colors.push(color.r, color.g, color.b);
         normals.push(_D.x, _D.y, _D.z);
         tangents.push(1, 0, 0, 1);
@@ -217,7 +219,8 @@ class TerrainChunk {
 
     let count = 0;
     for (let i = 0, n = indices.length; i < n; i += 3) {
-      const splats = [];
+      const splats: ReturnType<TextureSplatter['getSplat']>[] = [];
+      type SplatType = keyof typeof splats[0];
       const i1 = indices[i] * 3;
       const i2 = indices[i + 1] * 3;
       const i3 = indices[i + 2] * 3;
@@ -227,7 +230,7 @@ class TerrainChunk {
         _P.fromArray(wsPositions, j1);
         _N.fromArray(normals, j1);
         _D.fromArray(up, j1);
-        const s = this._params.colourGenerator.GetSplat(_P, _N, _D);
+        const s = this.params.textureSplatter.getSplat(_P.x, _P.y, _P.z);
         splats.push(s);
       }
 
@@ -237,7 +240,7 @@ class TerrainChunk {
       }
       for (let curSplat of splats) {
         for (let k in curSplat) {
-          splatStrengths[k].strength += curSplat[k].strength;
+          splatStrengths[k].strength += curSplat[k as keyof typeof curSplat].strength;
         }
       }
 
@@ -258,47 +261,47 @@ class TerrainChunk {
 
       for (let s = 0; s < 3; s++) {
         let total =
-          splats[s][typeValues[0].key].strength +
-          splats[s][typeValues[1].key].strength +
-          splats[s][typeValues[2].key].strength +
-          splats[s][typeValues[3].key].strength;
+          splats[s][typeValues[0].key as SplatType].strength +
+          splats[s][typeValues[1].key as SplatType].strength +
+          splats[s][typeValues[2].key as SplatType].strength +
+          splats[s][typeValues[3].key as SplatType].strength;
         const normalization = 1.0 / total;
 
-        splats[s][typeValues[0].key].strength *= normalization;
-        splats[s][typeValues[1].key].strength *= normalization;
-        splats[s][typeValues[2].key].strength *= normalization;
-        splats[s][typeValues[3].key].strength *= normalization;
+        splats[s][typeValues[0].key as SplatType].strength *= normalization;
+        splats[s][typeValues[1].key as SplatType].strength *= normalization;
+        splats[s][typeValues[2].key as SplatType].strength *= normalization;
+        splats[s][typeValues[3].key as SplatType].strength *= normalization;
       }
 
-      weights1.push(splats[0][typeValues[3].key].index);
-      weights1.push(splats[0][typeValues[2].key].index);
-      weights1.push(splats[0][typeValues[1].key].index);
-      weights1.push(splats[0][typeValues[0].key].index);
+      weights1.push(splats[0][typeValues[3].key as SplatType].index);
+      weights1.push(splats[0][typeValues[2].key as SplatType].index);
+      weights1.push(splats[0][typeValues[1].key as SplatType].index);
+      weights1.push(splats[0][typeValues[0].key as SplatType].index);
 
-      weights1.push(splats[1][typeValues[3].key].index);
-      weights1.push(splats[1][typeValues[2].key].index);
-      weights1.push(splats[1][typeValues[1].key].index);
-      weights1.push(splats[1][typeValues[0].key].index);
+      weights1.push(splats[1][typeValues[3].key as SplatType].index);
+      weights1.push(splats[1][typeValues[2].key as SplatType].index);
+      weights1.push(splats[1][typeValues[1].key as SplatType].index);
+      weights1.push(splats[1][typeValues[0].key as SplatType].index);
 
-      weights1.push(splats[2][typeValues[3].key].index);
-      weights1.push(splats[2][typeValues[2].key].index);
-      weights1.push(splats[2][typeValues[1].key].index);
-      weights1.push(splats[2][typeValues[0].key].index);
+      weights1.push(splats[2][typeValues[3].key as SplatType].index);
+      weights1.push(splats[2][typeValues[2].key as SplatType].index);
+      weights1.push(splats[2][typeValues[1].key as SplatType].index);
+      weights1.push(splats[2][typeValues[0].key as SplatType].index);
 
-      weights2.push(splats[0][typeValues[3].key].strength);
-      weights2.push(splats[0][typeValues[2].key].strength);
-      weights2.push(splats[0][typeValues[1].key].strength);
-      weights2.push(splats[0][typeValues[0].key].strength);
+      weights2.push(splats[0][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[0][typeValues[0].key as SplatType].strength);
 
-      weights2.push(splats[1][typeValues[3].key].strength);
-      weights2.push(splats[1][typeValues[2].key].strength);
-      weights2.push(splats[1][typeValues[1].key].strength);
-      weights2.push(splats[1][typeValues[0].key].strength);
+      weights2.push(splats[1][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[1][typeValues[0].key as SplatType].strength);
 
-      weights2.push(splats[2][typeValues[3].key].strength);
-      weights2.push(splats[2][typeValues[2].key].strength);
-      weights2.push(splats[2][typeValues[1].key].strength);
-      weights2.push(splats[2][typeValues[0].key].strength);
+      weights2.push(splats[2][typeValues[3].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[2].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[1].key as SplatType].strength);
+      weights2.push(splats[2][typeValues[0].key as SplatType].strength);
 
       count++;
       if (count % 10000 == 0) {
@@ -375,3 +378,5 @@ class TerrainChunk {
     );
   }
 }
+
+
