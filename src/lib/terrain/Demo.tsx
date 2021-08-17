@@ -9,8 +9,8 @@ import {
 import { folder, useControls } from "leva";
 import React from "react";
 import * as THREE from "three";
-import { HyposymetricTintsGenerator } from "./TextureSplatter";
-import { NoisyHeightGenerator } from "./HeightGenerator";
+import { HyposymetricTintsGenerator } from "./texture-generator";
+import { NoisyHeightGenerator } from "./height-generator";
 import { TerrainMesh as _TerrainMesh } from "./TerrainMesh";
 import { Sphere, useHelper } from "@react-three/drei";
 import { useInput } from "src/Keyboard";
@@ -57,6 +57,7 @@ const TerrainMesh = React.memo(function TerrainMesh(props: TerrainMeshProps) {
       receiveShadow
       castShadow={false}
       position={props.offset}
+      frustumCulled={false}
       {...props}
     />
   );
@@ -132,7 +133,6 @@ function TerrainChunk({
             <TerrainMesh
               key={`${x}.${y}`}
               offset={[chunkSize * x, -chunkSize * y, 0]}
-              position={[chunkSize * x, -chunkSize * y, 0]}
               width={chunkSize}
               height={chunkSize}
               resolution={resolution}

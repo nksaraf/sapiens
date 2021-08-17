@@ -19,7 +19,7 @@ export const COLORS = {
 
 export interface ColorGenerator<T extends object = object> {
   getColor(x: number, y: number, z: number): THREE.Color;
-  params: object;
+  params: T;
 }
 
 export class FixedColourGenerator implements ColorGenerator {
@@ -54,7 +54,6 @@ export interface TextureSplatterParams extends TextureSplatterRawParams {
 
 export class HyposymetricTintsGenerator implements ColorGenerator<{
   biomeNoiseGenerator: NoiseParams;
-
 }> {
   _params: TextureSplatterParams;
   constructor(params: Partial<TextureSplatterRawParams>) {

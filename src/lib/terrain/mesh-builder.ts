@@ -1,6 +1,6 @@
 import { Vector3 } from "@react-three/fiber";
-import { HeightGenerator } from "./HeightGenerator";
-import { ColorGenerator } from "./TextureSplatter";
+import { HeightGenerator } from "./height-generator";
+import { ColorGenerator } from "./texture-generator";
 
 export interface TerrainMeshParams {
   width: number;

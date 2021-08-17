@@ -1,8 +1,8 @@
 import { NoiseGenerator, NoiseParams } from "@/noise";
 import { CubeQuadTree } from "@/quadtree";
 import * as THREE from "three";
-import { TextureSplatter } from "./TextureSplatter";
-import { NoisyHeightGenerator } from "./HeightGenerator";
+import { TextureSplatter } from "./texture-generator";
+import { NoisyHeightGenerator } from "./height-generator";
 import { terrainShader } from "./terrain-shader";
 import { TerrainChunk, TerrainChunkParams } from "./TerrainChunk";
 import { TerrainChunkRebuilder_Threaded } from "./thread";

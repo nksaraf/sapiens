@@ -1,7 +1,7 @@
 import { NoiseGenerator, NoiseParams } from "@/noise";
 import * as THREE from "three";
-import { TextureSplatter } from "./TextureSplatter";
-import { HeightGenerator } from "./HeightGenerator";
+import { TextureSplatter } from "./texture-generator";
+import { HeightGenerator } from "./height-generator";
 
 export interface TerrainChunkRawParams {
   width: number;

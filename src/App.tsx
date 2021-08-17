@@ -1,22 +1,17 @@
-import { Box, Html, OrbitControls, Plane, Sky, Stats } from "@react-three/drei";
+import { Html, OrbitControls, Sky, Stats } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import React, { Suspense } from "react";
+import React from "react";
 import { useControls } from "leva";
 import { Toaster } from "react-hot-toast";
 import { atom, Provider, useAtom } from "jotai";
-import { $, useCharacter } from "src/atoms";
+import { $ } from "src/atoms";
 import { getEngineMove, makeMove } from "@/chess/state";
 import { Text } from "@react-three/drei";
 import { useAtomValue, useUpdateAtom } from "jotai/utils";
 import { BLACK } from "@/chess/constants";
 import { Camera } from "./Camera";
 import { Light } from "./Light";
-import { Character } from "./models/Cow";
-import { Board } from "./models/chess/Board";
-import { LevaPanel } from "leva";
 import { Keyboard, useInput } from "./Keyboard";
-import PlayerModel from "./models/Player";
-import { Terrain } from "./lib/terrain/Terrain";
 import TerrainDemo from "@/terrain/Demo";
 
 const playEngineMove$ = atom(null, (get, set) => {
@@ -78,7 +73,6 @@ function GameCamera() {
         camera="perspective"
         position={[0, 500, 450]}
         fov={60}
-        frustumCulled={false}
         far={10000}
         onUpdate={(camera) => camera.lookAt(0, 0, 0)}
         makeDefault={controls.defaultCamera === "camera1"}
