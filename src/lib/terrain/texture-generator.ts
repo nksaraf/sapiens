@@ -86,7 +86,7 @@ export class HyposymetricTintsGenerator implements ColorGenerator<{
 
   getColor(x: any, y: any, height: number) {
     const m = this._params.biomeNoiseGenerator.get(x, y, height);
-    const h = math.sat(height / 900.0);
+    const h = math.sat(height / 100.0);
 
     const c1 = this._params.splines.arid.Get(h);
     const c2 = this._params.splines.humid.Get(h);

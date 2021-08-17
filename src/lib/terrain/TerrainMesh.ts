@@ -3,7 +3,7 @@ import { ColorGenerator, COLORS, FixedColourGenerator, HyposymetricTintsGenerato
 import { FixedHeightGenerator, HeightGenerator, NoisyHeightGenerator } from "./height-generator";
 import * as Comlink from "comlink";
 import { Vector3 } from "@react-three/fiber";
-import { MeshData, TerrainMeshParams } from "./mesh-builder";
+import { buildMeshData, MeshData, TerrainMeshParams } from "./mesh-builder";
 import MeshWorker from './mesh-worker?worker'
 import type { TerrainMeshWorkerParams } from "./mesh-worker";
 import { NoiseGenerator, NoiseParams } from "@/noise";
@@ -76,6 +76,18 @@ export class TerrainMesh extends THREE.Mesh {
       this.updateFromData(data);
       console.timeEnd(`updating ${offset}`);
     });
+
+    // this.updateFromData(buildMeshData({
+    //   width: this.width,
+    //   height: this.height,
+    //   resolution: this.resolution,
+    //   offset: this.offset as THREE.Vector3,
+    //   heightGenerator: this.heightGenerator,
+    //   colorGenerator: this.colorGenerator
+    // }));
+
+    // console.timeEnd(`updating ${offset}`);
+
   }
 }
 

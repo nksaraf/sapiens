@@ -2,7 +2,6 @@ import { NoiseGenerator, NoiseParams } from "../noise";
 import * as THREE from "three";
 import { HyposymetricTintsGenerator, TextureSplatter } from "./texture-generator";
 import { NoisyHeightGenerator } from "./height-generator";
-import type { TerrainChunkRawParams } from "./TerrainChunk";
 import * as Comlink from 'comlink';
 import { buildMeshData, MeshData, TerrainMeshParams } from "./mesh-builder";
 

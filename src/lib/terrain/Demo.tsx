@@ -17,15 +17,16 @@ import { useInput } from "src/Keyboard";
 import create from "zustand";
 import { combine } from "zustand/middleware";
 import { AxesHelper } from "three";
+import { InfiniteTerrain } from "./InfiniteTerrain";
 
 extend({ TerrainMesh: _TerrainMesh, NoisyHeightGenerator, NoiseGenerator });
 
-type TerrainMeshProps = Object3DNode<_TerrainMesh, typeof _TerrainMesh>;
-type NoisyHeightGeneratorProps = Node<
+export type TerrainMeshProps = Object3DNode<_TerrainMesh, typeof _TerrainMesh>;
+export type NoisyHeightGeneratorProps = Node<
   NoisyHeightGenerator,
   typeof NoisyHeightGenerator
 >;
-type NoiseGeneratorProps = Node<NoiseGenerator, typeof NoiseGenerator>;
+export type NoiseGeneratorProps = Node<NoiseGenerator, typeof NoiseGenerator>;
 
 declare global {
   namespace JSX {
@@ -37,7 +38,9 @@ declare global {
   }
 }
 
-const TerrainMesh = React.memo(function TerrainMesh(props: TerrainMeshProps) {
+export const TerrainMesh = React.memo(function TerrainMesh(
+  props: TerrainMeshProps
+) {
   const ref = React.useRef<_TerrainMesh>();
 
   React.useLayoutEffect(() => {
@@ -69,7 +72,7 @@ const terrainNoiseParams = {
   lacunarity: 1.6,
   exponentiation: 7.5,
   height: 900.0,
-  scale: 372.0,
+  scale: 1400.0,
   noiseType: "simplex",
   seed: 1,
 } as const;
@@ -85,7 +88,7 @@ const biomeNoiseParams = {
   height: 1.0,
 } as const;
 
-const useTerrainGenerator = () => {
+export const useTerrainGenerator = () => {
   const terrainNoiseGenerator = useNoiseGenerator(
     "terrain",
     terrainNoiseParams
@@ -106,12 +109,12 @@ const useTerrainGenerator = () => {
   return { colorGenerator, heightGenerator };
 };
 
-const terrainMaterial = new THREE.MeshStandardMaterial({
+export const terrainMaterial = new THREE.MeshStandardMaterial({
   side: THREE.FrontSide,
   vertexColors: true,
 });
 
-function TerrainChunk({
+function TerrainPlane({
   width = 1000,
   height = 1000,
   chunkSize = 500,
@@ -152,7 +155,7 @@ function TerrainChunk({
   );
 }
 
-const useCameraPosition = create(
+export const useCameraPosition = create(
   combine(
     {
       position: new THREE.Vector3(0, 0, 50),
@@ -198,81 +201,15 @@ function PlayerCamera() {
   );
 }
 
-let _MIN_CELL_SIZE = 500;
-
-function getCellIndex(p: THREE.Vector3) {
-  const xp = p.x + _MIN_CELL_SIZE * 0.5;
-  const yp = p.y + _MIN_CELL_SIZE * 0.5;
-  const x = Math.floor(xp / _MIN_CELL_SIZE);
-  const z = Math.floor(yp / _MIN_CELL_SIZE);
-  return [x, z];
-}
-
-function Terrain({ chunkSize = 500, resolution = 64 }) {
-  const { heightGenerator, colorGenerator } = useTerrainGenerator();
-
-  const [chunks, setChunks] = React.useState(
-    () => ({} as Record<string, { offset: [number, number] }>)
-  );
-
-  useFrame(() => {
-    const { position } = useCameraPosition.getState();
-    const [xc, yc] = getCellIndex(position);
-    const key = `${xc}.${yc}`;
-    if (key in chunks) {
-      return;
-    }
-
-    setChunks((chunks) => {
-      return {
-        ...chunks,
-        [key]: {
-          offset: [xc, yc],
-        },
-      };
-    });
-  });
-
-  const materialControls = useControls("terrain", {
-    wireframe: true,
-  });
-
-  return (
-    <>
-      {Object.keys(chunks).map((k) => {
-        let chunk = chunks[k];
-        let [x, y] = chunk.offset;
-        return (
-          <TerrainMesh
-            key={`${x}.${y}`}
-            offset={[chunkSize * x, chunkSize * y, 0]}
-            width={chunkSize}
-            height={chunkSize}
-            resolution={resolution}
-            heightGenerator={heightGenerator}
-            colorGenerator={colorGenerator}
-          >
-            <primitive
-              attach="material"
-              object={terrainMaterial}
-              {...materialControls}
-            />
-          </TerrainMesh>
-        );
-      })}
-    </>
-  );
-}
-
 export default function TerrainDemo() {
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
       <PlayerCamera />
-      <Terrain
+      <InfiniteTerrain
         {...useControls("terrain", {
-          width: 1000,
-          height: 1000,
-          chunkSize: 500,
+          // width: 1000,
+          // height: 1000,
+          chunkSize: 200,
           resolution: 100,
         })}
       />
