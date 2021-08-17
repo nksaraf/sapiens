@@ -1,23 +1,28 @@
-import { NoiseGenerator } from "@/noise";
+import { NoiseGenerator, NoiseParams } from "../noise";
 
 export class FixedHeightGenerator implements HeightGenerator {
-  constructor() { }
-  get(x: number, y: number, z: number = 0): [number, number] {
-    return [50, 1];
+  params: { height: number } = { height: 0 }
+  constructor({ height = 0 }) {
+    this.params.height = 0;
   }
+  get(x: number, y: number, z: number = 0): number {
+    return this.params.height;
+  }
+
 }
 
-export interface HeightGenerator {
-  get(x: number, y: number, z?: number): [number, number];
+export interface HeightGenerator<T extends object = object> {
+  get(x: number, y: number, z?: number): number;
+  params: T
 }
 
-export class NoisyHeightGenerator implements HeightGenerator {
+export class NoisyHeightGenerator implements HeightGenerator<NoiseParams> {
   noiseGenerator: NoiseGenerator;
   constructor(noiseGenerator?: NoiseGenerator) {
     this.noiseGenerator = noiseGenerator ?? new NoiseGenerator();
   }
-  get(x: number, y: number, z?: number): [number, number] {
-    return [this.noiseGenerator.get(x, y, z), 1];
+  get(x: number, y: number, z?: number): number {
+    return this.noiseGenerator.get(x, y, z);
   }
 
   get params() {

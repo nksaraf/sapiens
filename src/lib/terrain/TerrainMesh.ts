@@ -1,53 +1,41 @@
 import { NoiseGenerator } from "@/noise";
 import * as THREE from "three";
 import { ColorGenerator, COLORS, FixedColourGenerator, TextureSplatter } from "./TextureSplatter";
-import { HeightGenerator } from "./HeightGenerator";
+import { FixedHeightGenerator, HeightGenerator } from "./HeightGenerator";
 
-export interface TerrainMeshParams {
-  width: number;
-  // scale: number;
-  offset: THREE.Vector3;
-  resolution: number;
-  // radius: number; 
-  // biomeNoiseGenerator: NoiseGenerator;
-  textureSplatter: TextureSplatter;
-  heightGenerators: HeightGenerator[];
-}
+import MyWorker from './worker?worker'
+import * as Comlink from "comlink";
+import { Vector3 } from "@react-three/fiber";
+import { MeshData, TerrainMeshParams } from "./builder";
+
+const worker = Comlink.wrap<{ buildMeshData(params: any): MeshData }>(new MyWorker());
 
 export class TerrainMesh extends THREE.Mesh {
   width: number;
   height: number;
   resolution: number;
-  heightGenerators: HeightGenerator[];
+  heightGenerator: HeightGenerator;
   colorGenerator: ColorGenerator;
   needsUpdate: boolean = true;
-  offset: THREE.Vector3 | [number, number, number]
+  offset: Vector3
 
-  constructor() {
+  constructor(params: Partial<TerrainMeshParams> = {}) {
     super(new THREE.BufferGeometry());
-    this.width = 100;
-    this.height = 100;
-    this.resolution = 1;
-    this.heightGenerators = [];
-    this.colorGenerator = new FixedColourGenerator({ color: COLORS.DEEP_OCEAN });
-    this.offset = new THREE.Vector3()
-    this.update()
+    this.width = params.width ?? 100;
+    this.height = params.height ?? 100;
+    this.resolution = params.resolution ?? 1;
+    this.heightGenerator = params.heightGenerator ?? new FixedHeightGenerator({ height: 50 });
+    this.colorGenerator = params.colorGenerator ?? new FixedColourGenerator({ color: COLORS.DEEP_OCEAN });
+    this.offset = params.offset ?? new THREE.Vector3()
   }
 
-  updateFromData(data: {
-    positions: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    colors: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    normals: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    tangents: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    weights1: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    weights2: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-    uvs: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
-  }) {
+  updateFromData(data: MeshData) {
     const {
       positions,
       uvs,
       normals,
-      colors
+      colors,
+      indices
     } = data;
     this.geometry.setAttribute(
       'position', new THREE.Float32BufferAttribute(positions, 3));
@@ -58,6 +46,9 @@ export class TerrainMesh extends THREE.Mesh {
     this.geometry.setAttribute(
       'color', new THREE.Float32BufferAttribute(colors, 3));
 
+    if (indices) {
+      this.geometry.setIndex(indices);
+    }
     this.geometry.attributes.position.needsUpdate = true;
     this.geometry.attributes.uv.needsUpdate = true;
     this.geometry.attributes.normal.needsUpdate = true;
@@ -70,58 +61,28 @@ export class TerrainMesh extends THREE.Mesh {
   }
 
   update() {
-    this.resetGeometry();
-    const positions = [];
-    const uvs = [];
-    const normals = [];
-    const colors = [];
-    const indices = [];
-    let resolution = Math.floor(this.resolution);
-    let offset = this.offset as THREE.Vector3
-    let width = this.width;
-    let height = this.height;
-    let halfWidth = width / 2
-    let halfHeight = height / 2
-    for (let x = 0; x < resolution + 1; x++) {
-      const xp = x * width / resolution;
-      for (let y = 0; y < resolution + 1; y++) {
-        const yp = y * height / resolution;
-        const z = this.heightGenerators.length > 0 ? this.heightGenerators[0].get(xp + offset.x, yp + offset.y)[0] : 0
-        const color = this.colorGenerator.getColor(xp + offset.x, yp + offset.y, z);
-        positions.push(xp - halfWidth, (yp - halfHeight), z);
-        normals.push(0, 0, 1);
-        colors.push(color.r, color.g, color.b);
-        uvs.push(x / resolution, 1 - (y / resolution));
-      }
-    }
+    console.log('updating', (this.offset as THREE.Vector3).toArray());
+    worker.buildMeshData({
+      width: this.width,
+      height: this.height,
+      resolution: this.resolution,
+      offset: (this.offset as THREE.Vector3).toArray(),
+      heightGenerator: this.heightGenerator.params,
+      colorGenerator: this.colorGenerator.params
+    }).then(data => {
+      this.updateFromData(data);
+    });
+    // const data = buildMeshData({
+    //   width: this.width,
+    //   height: this.height,
+    //   resolution: this.resolution,
+    //   offset: this.offset as THREE.Vector3,
+    //   heightGenerator: this.heightGenerator,
+    //   colorGenerator: this.colorGenerator
+    // });
 
-    for (let i = 0; i < resolution; i++) {
-      for (let j = 0; j < resolution; j++) {
-        const a = i + (resolution + 1) * j;
-        const b = i + (resolution + 1) * (j + 1);
-        const c = (i + 1) + (resolution + 1) * (j + 1);
-        const d = (i + 1) + (resolution + 1) * j;
-
-        indices.push(a, b, d);
-        indices.push(b, c, d);
-      }
-    }
-
-    this.geometry.setIndex(indices);
-    this.geometry.setAttribute(
-      'position', new THREE.Float32BufferAttribute(positions, 3));
-    this.geometry.setAttribute(
-      'uv', new THREE.Float32BufferAttribute(uvs, 2));
-    this.geometry.setAttribute(
-      'normal', new THREE.Float32BufferAttribute(normals, 3));
-    this.geometry.setAttribute(
-      'color', new THREE.Float32BufferAttribute(colors, 3));
-
-    this.geometry.attributes.position.needsUpdate = true;
-    this.geometry.attributes.uv.needsUpdate = true;
-    this.geometry.attributes.normal.needsUpdate = true;
-    this.geometry.attributes.color.needsUpdate = true;
-    this.geometry.computeVertexNormals()
+    // this.resetGeometry();
+    // this.updateFromData(data);
   }
 
   // *rebuild() {
@@ -251,3 +212,4 @@ export class TerrainMesh extends THREE.Mesh {
   //     new THREE.BufferAttribute(new Uint32Array(indices), 1));
   // }
 }
+

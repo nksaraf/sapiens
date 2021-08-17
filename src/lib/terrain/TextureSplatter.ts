@@ -1,5 +1,5 @@
 import { math } from "@/math";
-import { NoiseGenerator } from "@/noise";
+import { NoiseGenerator, NoiseParams } from "@/noise";
 import { LinearSpline } from "@/spline";
 import * as THREE from "three";
 
@@ -17,8 +17,9 @@ export const COLORS = {
 
 };
 
-export interface ColorGenerator {
+export interface ColorGenerator<T extends object = object> {
   getColor(x: number, y: number, z: number): THREE.Color;
+  params: object;
 }
 
 export class FixedColourGenerator implements ColorGenerator {
@@ -51,8 +52,11 @@ export interface TextureSplatterParams extends TextureSplatterRawParams {
   }
 }
 
-export class HyposymetricTintsGenerator implements ColorGenerator {
-  params: TextureSplatterParams;
+export class HyposymetricTintsGenerator implements ColorGenerator<{
+  biomeNoiseGenerator: NoiseParams;
+
+}> {
+  _params: TextureSplatterParams;
   constructor(params: Partial<TextureSplatterRawParams>) {
     // Arid
     const aridSpline = new LinearSpline(colorLerp);
@@ -73,8 +77,8 @@ export class HyposymetricTintsGenerator implements ColorGenerator {
     oceanSpline.AddPoint(0.03, COLORS.SHALLOW_OCEAN);
     oceanSpline.AddPoint(0.05, COLORS.SHALLOW_OCEAN);
 
-    this.params = params as TextureSplatterParams;
-    this.params.splines = {
+    this._params = params as TextureSplatterParams;
+    this._params.splines = {
       ocean: oceanSpline,
       arid: aridSpline,
       humid: humidSpline,
@@ -82,11 +86,11 @@ export class HyposymetricTintsGenerator implements ColorGenerator {
   }
 
   getColor(x: any, y: any, height: number) {
-    const m = this.params.biomeNoiseGenerator.get(x, y, height);
-    const h = math.sat(height / 100.0);
+    const m = this._params.biomeNoiseGenerator.get(x, y, height);
+    const h = math.sat(height / 900.0);
 
-    const c1 = this.params.splines.arid.Get(h);
-    const c2 = this.params.splines.humid.Get(h);
+    const c1 = this._params.splines.arid.Get(h);
+    const c2 = this._params.splines.humid.Get(h);
 
     let c = c1.lerp(c2, m);
 
@@ -95,6 +99,12 @@ export class HyposymetricTintsGenerator implements ColorGenerator {
       // c = c.lerp(new THREE.Color(0x54380e), 1.0 - math.sat(h / 0.05));
     }
     return c;
+  }
+
+  get params() {
+    return {
+      biomeNoiseGenerator: this._params.biomeNoiseGenerator.params
+    }
   }
 }
 

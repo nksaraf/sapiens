@@ -37,6 +37,31 @@ declare global {
   }
 }
 
+const TerrainMesh = React.memo(function TerrainMesh(props: TerrainMeshProps) {
+  const ref = React.useRef<_TerrainMesh>();
+
+  React.useLayoutEffect(() => {
+    ref.current?.update();
+  }, [
+    props.resolution,
+    props.heightGenerator,
+    props.colorGenerator,
+    props.width,
+    props.height,
+    ...(props.offset as [number, number, number]),
+  ]);
+
+  return (
+    <terrainMesh
+      ref={ref}
+      receiveShadow
+      castShadow={false}
+      position={props.offset}
+      {...props}
+    />
+  );
+});
+
 const terrainNoiseParams = {
   octaves: 10,
   persistence: 0.5,
@@ -58,28 +83,6 @@ const biomeNoiseParams = {
   exponentiation: 1,
   height: 1.0,
 } as const;
-
-// function ControlledTerrainMesh(props: TerrainMeshProps) {
-//   const controls = useControls("terrain", {
-//     width: props.width ?? 500,
-//     height: props.height ?? 500,
-//     resolution: props.resolution ?? 100,
-//   });
-
-//   return (
-//     <TerrainMesh receiveShadow castShadow={false} {...controls} {...props} />
-//   );
-// }
-
-function TerrainMesh(props: TerrainMeshProps) {
-  const ref = React.useRef<_TerrainMesh>();
-
-  React.useLayoutEffect(() => {
-    ref.current?.update();
-  });
-
-  return <terrainMesh ref={ref} receiveShadow castShadow={false} {...props} />;
-}
 
 const useTerrainGenerator = () => {
   const terrainNoiseGenerator = useNoiseGenerator(
@@ -133,7 +136,7 @@ function TerrainChunk({
               width={chunkSize}
               height={chunkSize}
               resolution={resolution}
-              heightGenerators={[heightGenerator]}
+              heightGenerator={heightGenerator}
               colorGenerator={colorGenerator}
             >
               <primitive
@@ -152,7 +155,7 @@ function TerrainChunk({
 const useCameraPosition = create(
   combine(
     {
-      position: new THREE.Vector3(0, 50, 0),
+      position: new THREE.Vector3(0, 0, 50),
     },
     (set, get) => ({ set, get })
   )
@@ -243,11 +246,10 @@ function Terrain({ chunkSize = 500, resolution = 64 }) {
           <TerrainMesh
             key={`${x}.${y}`}
             offset={[chunkSize * x, chunkSize * y, 0]}
-            position={[chunkSize * x, chunkSize * y, 0]}
             width={chunkSize}
             height={chunkSize}
             resolution={resolution}
-            heightGenerators={[heightGenerator]}
+            heightGenerator={heightGenerator}
             colorGenerator={colorGenerator}
           >
             <primitive

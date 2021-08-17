@@ -78,6 +78,7 @@ function GameCamera() {
         camera="perspective"
         position={[0, 500, 450]}
         fov={60}
+        frustumCulled={false}
         far={10000}
         onUpdate={(camera) => camera.lookAt(0, 0, 0)}
         makeDefault={controls.defaultCamera === "camera1"}
