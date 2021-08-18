@@ -76,6 +76,7 @@ export class TerrainMesh extends THREE.Mesh {
         colorGenerator: this.colorGenerator.params as any
       }
     }, (data) => {
+      this.resetGeometry()
       this.updateFromData(data);
       console.timeEnd(`updating ${offset}`);
     })

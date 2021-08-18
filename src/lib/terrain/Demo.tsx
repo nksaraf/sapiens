@@ -5,10 +5,12 @@ import React from "react";
 import * as THREE from "three";
 import { HyposymetricTintsGenerator } from "./texture-generator";
 import { NoisyHeightGenerator } from "./height-generator";
-import { Sphere, useHelper } from "@react-three/drei";
+import { PerspectiveCamera, Sphere, useHelper } from "@react-three/drei";
 import { useInput } from "src/Keyboard";
-import { InfiniteTerrain } from "./InfiniteTerrain";
+import { InfiniteTerrain, QuadTreeTerrain } from "./InfiniteTerrain";
 import { createStore } from "../store";
+import { OrbitControls } from "@react-three/drei";
+import { TerrainPlane } from "./TerrainPlane";
 
 const terrainNoiseParams = {
   octaves: 10,
@@ -58,8 +60,22 @@ export const terrainMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
 });
 
+export function TerrainMaterial() {
+  const materialControls = useControls("terrain", {
+    wireframe: false,
+  });
+
+  return (
+    <primitive
+      attach="material"
+      object={terrainMaterial}
+      {...materialControls}
+    />
+  );
+}
+
 export const useViewer = createStore({
-  position: new THREE.Vector3(0, 0, 50),
+  position: new THREE.Vector3(0, 50, 0),
 });
 
 function PlayerCamera() {
@@ -76,42 +92,53 @@ function PlayerCamera() {
     const { position } = useViewer.getState();
     const { controls } = useInput.getState();
     if (controls.forward) {
-      position.y += speed;
+      ref.current.position.z += speed;
     }
     if (controls.backward) {
-      position.y -= speed;
+      ref.current.position.z -= speed;
     }
     if (controls.left) {
-      position.x -= speed;
+      ref.current.position.x -= speed;
     }
     if (controls.right) {
-      position.x += speed;
+      ref.current.position.x += speed;
     }
 
-    ref.current.position.copy(position);
-    // camera.lookAt(ref.current.position);
+    position.copy(ref.current.position);
+    // ref.current.position.copy(position);
+    // camera.lookAt(position);
+    // camera.position.z = ref.current.position.y + 10;
   });
   return (
-    <Sphere ref={ref} args={[10, 10, 10]}>
-      <meshStandardMaterial color="red" />
-    </Sphere>
+    <>
+      <PerspectiveCamera
+        makeDefault
+        position={[0, 100, -100]}
+        far={100000}
+        near={0.1}
+      />
+      <OrbitControls makeDefault />
+      <Sphere ref={ref} args={[10, 10, 10]} position={[0, 50, 0]}>
+        <meshStandardMaterial color="red" />
+      </Sphere>
+    </>
   );
 }
 
 export default function TerrainDemo() {
   return (
-    <group rotation={[-Math.PI / 2, 0, 0]}>
+    <>
       <PlayerCamera />
-      <InfiniteTerrain
+      <QuadTreeTerrain
         {...useControls("terrain", {
-          // width: 1000,
-          // height: 1000,
+          width: 1000,
+          height: 1000,
           maxViewDistance: 1000,
           chunkSize: 500,
           resolution: 64,
         })}
       />
       <axesHelper scale={[100, 100, 100]} />
-    </group>
+    </>
   );
 }

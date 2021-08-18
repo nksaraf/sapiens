@@ -3,7 +3,7 @@ import { focusAtom } from "jotai/optics"
 import { atomFamily, atomWithReset } from "jotai/utils"
 import { Square, State } from "./lib/chess/types"
 import { DEFAULT_POSITION, EMPTY, WHITE } from "./lib/chess/constants"
-import { createState, generateMoves, getFen, getPiece, inCheck, inCheckmate, loadFen, makePretty } from "./lib/chess/state"
+import { createState, generateMoves, getEngineMove, getFen, getPiece, inCheck, inCheckmate, loadFen, makeMove, makePretty } from "./lib/chess/state"
 import { Engine } from "@/chess/engine"
 import create from "zustand"
 import { atomWithStore } from 'jotai/zustand'
@@ -138,6 +138,12 @@ const character$ = atomWithStore(useCharacter)
 
 const piece$ = atomFamily((square: Square) => atom(get => getPiece(get(board$), square)));
 
+const playEngineMove$ = atom(null, (get, set) => {
+  getEngineMove(get($.engine), get($.board)).then((move) =>
+    set($.board, (board) => makeMove(board, move))
+  );
+});
+
 export const atoms = {
   board: board$,
   boardFen: boardFen$,
@@ -152,7 +158,8 @@ export const atoms = {
   engine: engine$,
   inCheckmate: inCheckmate$,
   character: character$,
-  gltfAsset: gltfAsset$
+  gltfAsset: gltfAsset$,
+  playEngineMove: playEngineMove$
 }
 
 export const $ = atoms

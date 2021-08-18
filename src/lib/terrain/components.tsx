@@ -27,12 +27,10 @@ declare global {
   }
 }
 
-export const TerrainMesh = React.memo(function TerrainMesh(
-  props: TerrainMeshProps
-) {
+export function TerrainMesh(props: TerrainMeshProps) {
   const ref = React.useRef<ThreeTerrainMesh>();
 
-  React.useLayoutEffect(() => {
+  React.useEffect(() => {
     ref.current?.update();
   }, [
     props.resolution,
@@ -52,4 +50,4 @@ export const TerrainMesh = React.memo(function TerrainMesh(
       {...props}
     />
   );
-});
+}

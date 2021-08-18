@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-const _MIN_NODE_SIZE = 500;
+const _MIN_NODE_SIZE = 50;
 
 interface QuadTree2Unit {
   bounds: THREE.Box2;
@@ -11,7 +11,8 @@ interface QuadTree2Unit {
 
 export class QuadTree2 {
   root: QuadTree2Unit;
-  constructor(params: { min: THREE.Vector2; max: THREE.Vector2 }) {
+  minNodeSize: number;
+  constructor(params: { min: THREE.Vector2; max: THREE.Vector2; minNodeSize: number }) {
     const b = new THREE.Box2(params.min, params.max);
     this.root = {
       bounds: b,
@@ -19,9 +20,10 @@ export class QuadTree2 {
       center: b.getCenter(new THREE.Vector2()),
       size: b.getSize(new THREE.Vector2()),
     };
+    this.minNodeSize = params.minNodeSize
   }
 
-  GetChildren() {
+  getChildren() {
     const children: QuadTree2Unit[] = [];
     this.getChildrenRecursive(this.root, children);
     return children;
@@ -38,27 +40,27 @@ export class QuadTree2 {
     }
   }
 
-  Insert(pos: THREE.Vector3) {
-    this._Insert(this.root, new THREE.Vector2(pos.x, pos.z));
+  insert(pos: THREE.Vector3) {
+    this.insertRecursive(this.root, new THREE.Vector2(pos.x, pos.z));
   }
 
-  _Insert(child: QuadTree2Unit, pos: THREE.Vector2) {
-    const distToChild = this._DistanceToChild(child, pos);
+  insertRecursive(child: QuadTree2Unit, pos: THREE.Vector2) {
+    const distToChild = this.distanceToChild(child, pos);
 
-    if (distToChild < child.size.x && child.size.x > _MIN_NODE_SIZE) {
-      child.children = this._CreateChildren(child);
+    if (distToChild < child.size.x && child.size.x > this.minNodeSize) {
+      child.children = this.createChildren(child);
 
       for (let c of child.children) {
-        this._Insert(c, pos);
+        this.insertRecursive(c, pos);
       }
     }
   }
 
-  _DistanceToChild(child: QuadTree2Unit, pos: any) {
+  distanceToChild(child: QuadTree2Unit, pos: THREE.Vector2) {
     return child.center.distanceTo(pos);
   }
 
-  _CreateChildren(child: QuadTree2Unit) {
+  createChildren(child: QuadTree2Unit) {
     const midpoint = child.bounds.getCenter(new THREE.Vector2());
 
     // Bottom left

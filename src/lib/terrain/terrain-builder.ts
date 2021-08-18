@@ -33,12 +33,13 @@ export function buildMeshData({ resolution, offset, width, height, heightGenerat
   let halfHeight = height / 2
   for (let x = 0; x < resolution + 1; x++) {
     const xp = x * width / resolution;
-    for (let y = 0; y < resolution + 1; y++) {
-      const yp = y * height / resolution;
-      const z = heightGenerator.get(xp + offset.x, yp + offset.y);
-      const color = colorGenerator.getColor(xp + offset.x, yp + offset.y, z);
-      positions.push(xp - halfWidth, (yp - halfHeight), z);
-      normals.push(0, 0, 1);
+    for (let z = 0; z < resolution + 1; z++) {
+      const zp = z * height / resolution;
+      const y = heightGenerator.get(xp + offset.x - halfWidth, zp + offset.z - halfHeight);
+      console.log(xp + offset.x, zp + offset.z, y);
+      const color = colorGenerator.getColor(xp + offset.x - halfWidth, zp + offset.z - halfHeight, y);
+      positions.push(xp - halfWidth, y, zp - halfHeight);
+      normals.push(0, 1, 0);
       colors.push(color.r, color.g, color.b);
       uvs.push(x / resolution, 1 - (y / resolution));
     }
@@ -47,12 +48,12 @@ export function buildMeshData({ resolution, offset, width, height, heightGenerat
   for (let i = 0; i < resolution; i++) {
     for (let j = 0; j < resolution; j++) {
       const a = i + (resolution + 1) * j;
-      const b = i + (resolution + 1) * (j + 1);
-      const c = (i + 1) + (resolution + 1) * (j + 1);
-      const d = (i + 1) + (resolution + 1) * j;
+      const b = (i + 1) + (resolution + 1) * j;
+      const c = i + (resolution + 1) * (j + 1);
+      const d = (i + 1) + (resolution + 1) * (j + 1);
 
       indices.push(a, b, d);
-      indices.push(b, c, d);
+      indices.push(c, a, d);
     }
   }
 
