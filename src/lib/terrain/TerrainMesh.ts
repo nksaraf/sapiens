@@ -3,12 +3,13 @@ import { ColorGenerator, COLORS, FixedColourGenerator, HyposymetricTintsGenerato
 import { FixedHeightGenerator, HeightGenerator, NoisyHeightGenerator } from "./height-generator";
 import * as Comlink from "comlink";
 import { Vector3 } from "@react-three/fiber";
-import { buildMeshData, MeshData, TerrainMeshParams } from "./mesh-builder";
-import MeshWorker from './mesh-worker?worker'
-import type { TerrainMeshWorkerParams } from "./mesh-worker";
+import { buildMeshData, MeshData, TerrainMeshParams } from "./terrain-builder";
+import TerrainBuilderWorker from './terrain-builder.worker?worker'
+import type { TerrainMeshWorkerParams } from "./terrain-builder.worker";
 import { NoiseGenerator, NoiseParams } from "@/noise";
+import { WorkerThreadPool } from "../threading";
 
-const worker = Comlink.wrap<{ buildMeshData(params: TerrainMeshWorkerParams): MeshData }>(new MeshWorker());
+let workerPool = new WorkerThreadPool<{ buildMeshData(params: TerrainMeshWorkerParams): MeshData }>(4, () => new TerrainBuilderWorker())
 
 export class TerrainMesh extends THREE.Mesh {
   width: number;
@@ -64,18 +65,32 @@ export class TerrainMesh extends THREE.Mesh {
   update() {
     let offset = (this.offset as THREE.Vector3).toArray();
     console.time(`updating ${offset}`);
-
-    worker.buildMeshData({
-      width: this.width,
-      height: this.height,
-      resolution: this.resolution,
-      offset: offset,
-      heightGenerator: this.heightGenerator.params as any,
-      colorGenerator: this.colorGenerator.params as any
-    }).then(data => {
+    workerPool.enqueue({
+      name: "buildMeshData",
+      params: {
+        width: this.width,
+        height: this.height,
+        resolution: this.resolution,
+        offset: offset,
+        heightGenerator: this.heightGenerator.params as any,
+        colorGenerator: this.colorGenerator.params as any
+      }
+    }, (data) => {
       this.updateFromData(data);
       console.timeEnd(`updating ${offset}`);
-    });
+    })
+
+    // worker.buildMeshData({
+    //   width: this.width,
+    //   height: this.height,
+    //   resolution: this.resolution,
+    //   offset: offset,
+    //   heightGenerator: this.heightGenerator.params as any,
+    //   colorGenerator: this.colorGenerator.params as any
+    // }).then(data => {
+    //   this.updateFromData(data);
+    //   console.timeEnd(`updating ${offset}`);
+    // });
 
     // this.updateFromData(buildMeshData({
     //   width: this.width,
@@ -90,4 +105,7 @@ export class TerrainMesh extends THREE.Mesh {
 
   }
 }
+
+
+
 

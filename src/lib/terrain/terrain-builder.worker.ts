@@ -2,8 +2,8 @@ import { NoiseGenerator, NoiseParams } from "../noise";
 import * as THREE from "three";
 import { HyposymetricTintsGenerator, TextureSplatter } from "./texture-generator";
 import { NoisyHeightGenerator } from "./height-generator";
-import * as Comlink from 'comlink';
-import { buildMeshData, MeshData, TerrainMeshParams } from "./mesh-builder";
+import { buildMeshData, MeshData, TerrainMeshParams } from "./terrain-builder";
+import { expose } from "../threading";
 
 export type TerrainMeshWorkerParams = Omit<TerrainMeshParams, "offset" | "heightGenerator" | "colorGenerator"> & {
   colorGenerator: {
@@ -13,7 +13,7 @@ export type TerrainMeshWorkerParams = Omit<TerrainMeshParams, "offset" | "height
   offset: [number, number, number];
 };
 
-const worker = {
+expose({
   buildMeshData: function (params: TerrainMeshWorkerParams): MeshData {
     const heightGenerator = new NoisyHeightGenerator(new NoiseGenerator(params.heightGenerator));
     const colorGenerator = new HyposymetricTintsGenerator({ biomeNoiseGenerator: new NoiseGenerator(params.colorGenerator.biomeNoiseGenerator) });
@@ -21,7 +21,4 @@ const worker = {
     offset.fromArray(params.offset)
     return buildMeshData({ heightGenerator, colorGenerator, offset, height: params.height, resolution: params.resolution, width: params.width })
   }
-}
-
-Comlink.expose(worker);
-
+})

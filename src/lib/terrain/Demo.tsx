@@ -1,70 +1,14 @@
-import { NoiseGenerator, NoiseType, useNoiseGenerator } from "@/noise";
-import {
-  extend,
-  Object3DNode,
-  Node,
-  useFrame,
-  useThree,
-} from "@react-three/fiber";
+import { useNoiseGenerator } from "@/noise";
+import { useFrame, useThree } from "@react-three/fiber";
 import { folder, useControls } from "leva";
 import React from "react";
 import * as THREE from "three";
 import { HyposymetricTintsGenerator } from "./texture-generator";
 import { NoisyHeightGenerator } from "./height-generator";
-import { TerrainMesh as _TerrainMesh } from "./TerrainMesh";
 import { Sphere, useHelper } from "@react-three/drei";
 import { useInput } from "src/Keyboard";
-import create from "zustand";
-import { combine } from "zustand/middleware";
-import { AxesHelper } from "three";
 import { InfiniteTerrain } from "./InfiniteTerrain";
-
-extend({ TerrainMesh: _TerrainMesh, NoisyHeightGenerator, NoiseGenerator });
-
-export type TerrainMeshProps = Object3DNode<_TerrainMesh, typeof _TerrainMesh>;
-export type NoisyHeightGeneratorProps = Node<
-  NoisyHeightGenerator,
-  typeof NoisyHeightGenerator
->;
-export type NoiseGeneratorProps = Node<NoiseGenerator, typeof NoiseGenerator>;
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      terrainMesh: TerrainMeshProps;
-      noisyHeightGenerator: NoisyHeightGeneratorProps;
-      noiseGenerator: NoiseGeneratorProps;
-    }
-  }
-}
-
-export const TerrainMesh = React.memo(function TerrainMesh(
-  props: TerrainMeshProps
-) {
-  const ref = React.useRef<_TerrainMesh>();
-
-  React.useLayoutEffect(() => {
-    ref.current?.update();
-  }, [
-    props.resolution,
-    props.heightGenerator,
-    props.colorGenerator,
-    props.width,
-    props.height,
-    ...(props.offset as [number, number, number]),
-  ]);
-
-  return (
-    <terrainMesh
-      ref={ref}
-      receiveShadow
-      castShadow={false}
-      position={props.offset}
-      frustumCulled={false}
-      {...props}
-    />
-  );
-});
+import { createStore } from "../store";
 
 const terrainNoiseParams = {
   octaves: 10,
@@ -114,55 +58,9 @@ export const terrainMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
 });
 
-function TerrainPlane({
-  width = 1000,
-  height = 1000,
-  chunkSize = 500,
-  resolution = 100,
-}) {
-  const { colorGenerator, heightGenerator } = useTerrainGenerator();
-
-  let chunksX = Math.ceil(width / chunkSize);
-  let chunksY = Math.ceil(height / chunkSize);
-  const materialControls = useControls("terrain", {
-    wireframe: true,
-  });
-
-  return (
-    <>
-      {[...new Array(chunksX).fill(0)].map((_, x) =>
-        [...new Array(chunksY).fill(0)].map((_, y) => {
-          return (
-            <TerrainMesh
-              key={`${x}.${y}`}
-              offset={[chunkSize * x, -chunkSize * y, 0]}
-              width={chunkSize}
-              height={chunkSize}
-              resolution={resolution}
-              heightGenerator={heightGenerator}
-              colorGenerator={colorGenerator}
-            >
-              <primitive
-                attach="material"
-                object={terrainMaterial}
-                {...materialControls}
-              />
-            </TerrainMesh>
-          );
-        })
-      )}
-    </>
-  );
-}
-
-export const useCameraPosition = create(
-  combine(
-    {
-      position: new THREE.Vector3(0, 0, 50),
-    },
-    (set, get) => ({ set, get })
-  )
-);
+export const useViewer = createStore({
+  position: new THREE.Vector3(0, 0, 50),
+});
 
 function PlayerCamera() {
   const ref = React.useRef<THREE.Mesh>();
@@ -175,8 +73,7 @@ function PlayerCamera() {
       return;
     }
 
-    const { position } = useCameraPosition.getState();
-
+    const { position } = useViewer.getState();
     const { controls } = useInput.getState();
     if (controls.forward) {
       position.y += speed;
@@ -209,8 +106,9 @@ export default function TerrainDemo() {
         {...useControls("terrain", {
           // width: 1000,
           // height: 1000,
-          chunkSize: 200,
-          resolution: 100,
+          maxViewDistance: 1000,
+          chunkSize: 500,
+          resolution: 64,
         })}
       />
       <axesHelper scale={[100, 100, 100]} />
