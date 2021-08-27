@@ -5,10 +5,10 @@ export class FixedHeightGenerator implements HeightGenerator {
   constructor({ height = 0 }) {
     this.params.height = 0;
   }
+  name = 'fixed-height'
   get(x: number, y: number, z: number = 0): number {
     return this.params.height;
   }
-
 }
 
 export interface HeightGenerator<T extends object = object> {
@@ -21,6 +21,7 @@ export class NoisyHeightGenerator implements HeightGenerator<NoiseParams> {
   constructor(noiseGenerator?: NoiseGenerator) {
     this.noiseGenerator = noiseGenerator ?? new NoiseGenerator();
   }
+  name = 'noisy-height'
   get(x: number, y: number, z?: number): number {
     return this.noiseGenerator.get(x, y, z);
   }
@@ -29,3 +30,9 @@ export class NoisyHeightGenerator implements HeightGenerator<NoiseParams> {
     return this.noiseGenerator.params;
   }
 }
+
+const HEIGHT_GENERATORS = {
+  'fixed-height': FixedHeightGenerator,
+  'noisy-height': NoisyHeightGenerator
+};
+

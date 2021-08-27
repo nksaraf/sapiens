@@ -2,14 +2,9 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import React from "react";
 import * as THREE from "three";
-// import { TerrainMesh as ThreeTerrainMesh } from "./TerrainMesh";
-import {
-  useTerrainGenerator,
-  useViewer,
-  terrainMaterial,
-  TerrainMaterial,
-} from "./Demo";
-import { TerrainMesh, TerrainMeshProps } from "./components";
+import { TerrainMesh as ThreeTerrainMesh } from "./TerrainMesh";
+import { useTerrainGenerator, useViewer } from "./Demo";
+import { TerrainMaterial, TerrainMesh, TerrainMeshProps } from "./components";
 import { QuadTree2 } from "@/quadtree";
 import { utils } from "./utils";
 
@@ -96,6 +91,62 @@ export function InfiniteTerrain({
   );
 }
 
+class TerrainChunkPool {}
+
+let pool: Record<number, ThreeTerrainMesh[]> = {};
+let active: Record<string, ThreeTerrainMesh> = {};
+
+// function retireChunks(chunks: Record<string, TerrainChunkParams>) {
+//   for (let c of chunks) {
+//     if (!(c.width in pool)) {
+//       this._pool[c.chunk._params.width] = [];
+//     }
+
+//     c.chunk.Hide();
+//     this._pool[c.chunk._params.width].push(c.chunk);
+//   }
+// }
+
+function TerrainBuilder({ children }: React.PropsWithChildren<{}>) {
+  return (
+    <>
+      {React.Children.map(children, (child, index) => {
+        let chunkElement = child as React.ReactElement;
+        if (chunkElement.type === TerrainMesh) {
+          console.log(child);
+          let mesh;
+
+          if (active[chunkElement.key!]) {
+            mesh = active[chunkElement.key!];
+          } else {
+            let w = chunkElement.props.size;
+            if (!(w in pool)) {
+              pool[w] = [];
+            }
+
+            if (pool[w].length > 0) {
+              mesh = pool[w].pop();
+            } else {
+              mesh = new ThreeTerrainMesh();
+            }
+          }
+
+          active[chunkElement.key!] = mesh!;
+
+          return (
+            <TerrainMesh
+              key={chunkElement.key}
+              object={mesh}
+              {...chunkElement.props}
+            />
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
 export function QuadTreeTerrain({
   // maxViewDistance = 400,
   // chunkSize = 200,
@@ -113,27 +164,16 @@ export function QuadTreeTerrain({
   const [chunks, setChunks] = React.useState(
     () => ({} as Record<string, TerrainChunkParams>)
   );
+  const [toDelete, setToDelete] = React.useState(
+    () => ({} as Record<string, TerrainChunkParams>)
+  );
 
   let ref = React.useRef(``);
 
-  // let position = useViewer((s) => s.position);
-  // let children = React.useMemo(() => {
-  //   let tree = new QuadTree2({
-  //     min: new THREE.Vector2(-10000, -10000),
-  //     max: new THREE.Vector2(10000, 10000),
-  //     minNodeSize: 500,
-  //   });
-
-  //   const { position } = useViewer.getState();
-
-  //   tree.insert(position);
-  //   return tree.getChildren();
-  // }, []);
-
   useFrame(() => {
     let tree = new QuadTree2({
-      min: new THREE.Vector2(-10000, -10000),
-      max: new THREE.Vector2(10000, 10000),
+      min: new THREE.Vector2(-1000, -1000),
+      max: new THREE.Vector2(1000, 1000),
       minNodeSize: 500,
     });
 
@@ -157,130 +197,37 @@ export function QuadTreeTerrain({
       Object.keys(difference).length === 0 &&
       Object.keys(toDelete).length === 0
     ) {
-      console.log("no change");
       return;
     }
 
+    console.log(newChunks);
+
     console.log(difference, toDelete);
-    // const [chunkX, chunkZ] = getCellIndex(position, chunkSize);
-    // const key = `${chunkX}.${chunkZ}`;
-    // if (key === ref.current) {
-    //   return;
-    // }
-
-    // let visibleChunks = Math.floor(maxViewDistance / chunkSize);
-
-    // ref.current = key;
     setChunks(newChunks);
-
-    //   return { ...chunks, ...newChunks };
-    // });
   });
 
   return (
     <>
-      {Object.keys(chunks).map((k) => {
-        let chunk = chunks[k];
-        return (
-          <TerrainChunk
-            key={chunk.key}
-            size={chunk.size}
-            offset={chunk.offset}
-            resolution={resolution}
-            heightGenerator={heightGenerator}
-            colorGenerator={colorGenerator}
-            // maxViewDistance={maxViewDistance}
-            frustumCulled={false}
-          >
-            <TerrainMaterial />
-          </TerrainChunk>
-        );
-      })}
-      {/* {children.map((child) => {
-        return (
-          <TerrainChunk
-            key={`${child.center.x}.${child.center.y}/${child.size.x}`}
-            size={child.size.x}
-            offset={[child.center.x, 0, child.center.y]}
-            resolution={resolution}
-            heightGenerator={heightGenerator}
-            colorGenerator={colorGenerator}
-            // maxViewDistance={maxViewDistance}
-            frustumCulled={false}
-          >
-            <TerrainMaterial />
-          </TerrainChunk>
-        );
-      })} */}
-      {/* <TerrainChunk
-        size={200}
-        offset={[0, 0, 0]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk>
-      <TerrainChunk
-        size={200}
-        offset={[0, 0, -200]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk> */}
-      {/* <TerrainChunk
-        size={200}
-        offset={[200, 0, 100]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        visible={useControls("terrain", { v2: true }).v2}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk> */}
-      {/* <TerrainChunk
-        size={200}
-        offset={[200, 0, -100]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk> */}
-      {/* <TerrainChunk
-        size={200}
-        offset={[200, 0, -300]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk> */}
-      {/* <TerrainChunk
-        size={400}
-        offset={[300, 0, 0]}
-        resolution={resolution}
-        heightGenerator={heightGenerator}
-        colorGenerator={colorGenerator}
-        visible={useControls("terrain", { v1: true }).v1}
-        // maxViewDistance={maxViewDistance}
-        frustumCulled={false}
-      >
-        <TerrainMaterial />
-      </TerrainChunk> */}
-      <gridHelper scale={100} />
+      <TerrainBuilder>
+        {Object.keys(chunks).map((k) => {
+          let chunk = chunks[k];
+          return (
+            <TerrainMesh
+              key={chunk.key}
+              width={chunk.size}
+              height={chunk.size}
+              offset={chunk.offset}
+              resolution={resolution}
+              heightGenerator={heightGenerator}
+              colorGenerator={colorGenerator}
+              // maxViewDistance={maxViewDistance}
+              frustumCulled={false}
+            >
+              <TerrainMaterial />
+            </TerrainMesh>
+          );
+        })}
+      </TerrainBuilder>
     </>
   );
 }
@@ -313,3 +260,5 @@ function TerrainChunk({
     />
   );
 }
+
+

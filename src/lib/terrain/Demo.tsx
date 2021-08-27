@@ -1,16 +1,19 @@
 import { useNoiseGenerator } from "@/noise";
 import { useFrame, useThree } from "@react-three/fiber";
-import { folder, useControls } from "leva";
+import { folder, useControls, LevaInputs } from "leva";
 import React from "react";
 import * as THREE from "three";
-import { HyposymetricTintsGenerator } from "./texture-generator";
+import { HyposymetricTintsGenerator } from "./color-generator";
 import { NoisyHeightGenerator } from "./height-generator";
-import { PerspectiveCamera, Sphere, useHelper } from "@react-three/drei";
-import { useInput } from "src/Keyboard";
+import { PerspectiveCamera, Sky, Sphere, useHelper } from "@react-three/drei";
+import { useKeyboardInput } from "src/Keyboard";
 import { InfiniteTerrain, QuadTreeTerrain } from "./InfiniteTerrain";
+import { Planet } from "./TerrainSphere";
 import { createStore } from "../store";
 import { OrbitControls } from "@react-three/drei";
 import { TerrainPlane } from "./TerrainPlane";
+import { TransformControls } from "@react-three/drei";
+import { BoxHelper } from "three";
 
 const terrainNoiseParams = {
   octaves: 10,
@@ -55,25 +58,6 @@ export const useTerrainGenerator = () => {
   return { colorGenerator, heightGenerator };
 };
 
-export const terrainMaterial = new THREE.MeshStandardMaterial({
-  side: THREE.FrontSide,
-  vertexColors: true,
-});
-
-export function TerrainMaterial() {
-  const materialControls = useControls("terrain", {
-    wireframe: false,
-  });
-
-  return (
-    <primitive
-      attach="material"
-      object={terrainMaterial}
-      {...materialControls}
-    />
-  );
-}
-
 export const useViewer = createStore({
   position: new THREE.Vector3(0, 50, 0),
 });
@@ -90,7 +74,7 @@ function PlayerCamera() {
     }
 
     const { position } = useViewer.getState();
-    const { controls } = useInput.getState();
+    const { controls } = useKeyboardInput.getState();
     if (controls.forward) {
       ref.current.position.z += speed;
     }
@@ -105,37 +89,64 @@ function PlayerCamera() {
     }
 
     position.copy(ref.current.position);
-    // ref.current.position.copy(position);
-    // camera.lookAt(position);
-    // camera.position.z = ref.current.position.y + 10;
   });
+
   return (
     <>
-      <PerspectiveCamera
-        makeDefault
-        position={[0, 100, -100]}
-        far={100000}
-        near={0.1}
-      />
-      <OrbitControls makeDefault />
-      <Sphere ref={ref} args={[10, 10, 10]} position={[0, 50, 0]}>
-        <meshStandardMaterial color="red" />
-      </Sphere>
+      <TransformControls>
+        <Sphere ref={ref} args={[10, 10, 10]} position={[0, 50, 0]}>
+          <meshStandardMaterial color="red" />
+        </Sphere>
+      </TransformControls>
     </>
   );
 }
+
+import {
+  createPlugin,
+  useInput,
+  useInputContext,
+  Components,
+  useValue,
+  useCanvas2d,
+  debounce,
+} from "leva/plugin";
+import { PickerContainer } from "@/leva-spline/StyledColor";
+import { Color } from "@/leva-spline/Color";
+import { Spline } from "@/leva-spline/Spline";
 
 export default function TerrainDemo() {
   return (
     <>
       <PlayerCamera />
-      <QuadTreeTerrain
+      {/* <QuadTreeTerrain
         {...useControls("terrain", {
           width: 1000,
           height: 1000,
           maxViewDistance: 1000,
           chunkSize: 500,
           resolution: 64,
+        })}
+      /> */}
+      <Spline />
+      <PerspectiveCamera
+        makeDefault
+        position={[0, 300, -300]}
+        far={100000}
+        near={0.1}
+      />
+      <OrbitControls makeDefault />
+      <Sky
+        distance={4500}
+        sunPosition={[0, 20, -200]}
+        inclination={0}
+        azimuth={0.25}
+      />
+      <Planet
+        {...useControls("terrain", {
+          resolution: 64,
+          applyHeight: true,
+          radius: { value: 100, min: 1, max: 500 },
         })}
       />
       <axesHelper scale={[100, 100, 100]} />

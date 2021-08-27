@@ -47,7 +47,7 @@ function useKeys(keyConfig: KeyConfig[]) {
   }, [keyConfig]);
 }
 
-export const useInput = create(
+export const useKeyboardInput = create(
   combine(
     {
       controls: {
@@ -64,7 +64,7 @@ export const useInput = create(
 );
 
 export function Keyboard() {
-  const set = useInput((s) => s.set);
+  const set = useKeyboardInput((s) => s.set);
   useKeys([
     {
       keys: ["ArrowUp", "w", "W", "z", "Z"],

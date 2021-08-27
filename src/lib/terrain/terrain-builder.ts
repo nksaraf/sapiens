@@ -1,6 +1,7 @@
 import { Vector3 } from "@react-three/fiber";
+import * as THREE from "three";
 import { HeightGenerator } from "./height-generator";
-import { ColorGenerator } from "./texture-generator";
+import { ColorGenerator } from "./color-generator";
 
 export interface TerrainMeshParams {
   width: number;
@@ -9,6 +10,7 @@ export interface TerrainMeshParams {
   resolution: number;
   colorGenerator: ColorGenerator;
   heightGenerator: HeightGenerator;
+  applyHeight: boolean;
 }
 
 export interface MeshData {
@@ -22,7 +24,7 @@ export interface MeshData {
   uvs: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
 }
 
-export function buildMeshData({ resolution, offset, width, height, heightGenerator, colorGenerator }: TerrainMeshParams) {
+export function buildMeshData({ resolution, offset, width, height, heightGenerator, colorGenerator, applyHeight }: TerrainMeshParams) {
   const positions = [];
   const uvs = [];
   const normals = [];
@@ -36,9 +38,13 @@ export function buildMeshData({ resolution, offset, width, height, heightGenerat
     for (let z = 0; z < resolution + 1; z++) {
       const zp = z * height / resolution;
       const y = heightGenerator.get(xp + offset.x - halfWidth, zp + offset.z - halfHeight);
-      console.log(xp + offset.x, zp + offset.z, y);
       const color = colorGenerator.getColor(xp + offset.x - halfWidth, zp + offset.z - halfHeight, y);
-      positions.push(xp - halfWidth, y, zp - halfHeight);
+
+      if (applyHeight) {
+        positions.push(xp - halfWidth, y, zp - halfHeight);
+      } else {
+        positions.push(xp - halfWidth, 0, zp - halfHeight);
+      }
       normals.push(0, 1, 0);
       colors.push(color.r, color.g, color.b);
       uvs.push(x / resolution, 1 - (y / resolution));
@@ -54,6 +60,66 @@ export function buildMeshData({ resolution, offset, width, height, heightGenerat
 
       indices.push(a, b, d);
       indices.push(c, a, d);
+    }
+  }
+
+  return { indices, positions, uvs, normals, colors };
+}
+
+// function getPointOnPlanet({ point, origin, })
+
+export function buildSphereFaceData({ origin, radius, localUp, resolution, offset, width, height, heightGenerator, colorGenerator, applyHeight }: TerrainMeshParams & {
+  origin: THREE.Vector3;
+  // worldMatrix: THREE.Matrix4;
+  localUp: THREE.Vector3;
+  radius: number;
+}) {
+  const positions = [];
+  const uvs = [];
+  const normals = [];
+  const colors = [];
+  const indices = [];
+
+  let axisA = new THREE.Vector3(localUp.y, localUp.z, localUp.x);
+  let axisB = localUp.clone().cross(axisA)
+
+  let vertices = resolution + 1;
+  for (let x = 0; x < vertices; x++) {
+    const xp = x / resolution;
+    for (let z = 0; z < vertices; z++) {
+      const zp = z / resolution;
+
+      const pointOnPlanet = localUp.clone()
+        .add(axisA.clone().multiplyScalar((xp - 0.5) * 2))
+        .add(axisB.clone().multiplyScalar((zp - 0.5) * 2))
+        .normalize()
+        .multiplyScalar(radius);
+
+
+      const y = heightGenerator.get(pointOnPlanet.x, pointOnPlanet.y, pointOnPlanet.z);
+      const color = colorGenerator.getColor(pointOnPlanet.x, pointOnPlanet.z, y * 2);
+
+      if (applyHeight) {
+        pointOnPlanet.multiplyScalar(1 + y)
+      }
+
+      positions.push(pointOnPlanet.x, pointOnPlanet.y, pointOnPlanet.z);
+      normals.push(0, 1, 0);
+      colors.push(color.r, color.g, color.b);
+      uvs.push(x / resolution, 1 - (y / resolution));
+    }
+  }
+
+
+  for (let i = 0; i < resolution; i++) {
+    for (let j = 0; j < resolution; j++) {
+      const a = i + (vertices) * j;
+      const b = (i) + (vertices) * (j + 1);
+      const c = (i + 1) + (vertices) * (j);
+      const d = (i + 1) + (vertices) * (j + 1);
+
+      indices.push(a, b, c);
+      indices.push(b, d, c);
     }
   }
 

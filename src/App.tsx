@@ -9,10 +9,9 @@ import { Text } from "@react-three/drei";
 import { useAtomValue } from "jotai/utils";
 import { Camera } from "./components/Camera";
 import { Light } from "./Light";
-import { Keyboard, useInput } from "./Keyboard";
+import { Keyboard, useKeyboardInput } from "./Keyboard";
 import TerrainDemo from "@/terrain/Demo";
 import React from "react";
-
 
 // function UI() {
 //   const inCheckmate = useAtomValue($.inCheckmate);
@@ -45,12 +44,6 @@ export function App() {
           <TerrainDemo />
           <Keyboard />
           <Light />
-          <Sky
-            distance={4500}
-            sunPosition={[0, 20, -200]}
-            inclination={0}
-            azimuth={0.25}
-          />
           <Stats />
         </Canvas>
         <Debugger />
@@ -62,7 +55,7 @@ export function App() {
 function Debugger() {
   return (
     <pre className="fixed bottom-2 right-2">
-      {JSON.stringify(useInput((s) => s.controls))}
+      {JSON.stringify(useKeyboardInput((s) => s.controls))}
     </pre>
   );
 }

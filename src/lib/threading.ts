@@ -37,7 +37,7 @@ interface WorkItem {
 }
 
 
-export class WorkerThreadPool<T> {
+export class WorkerThreadPool<T extends { [key: string]: (...args: any[]) => any }> {
   workers: WorkerThread<T>[];
   free: WorkerThread<T>[];
   _busy: { [id: number]: WorkerThread<T>; };
@@ -57,8 +57,8 @@ export class WorkerThreadPool<T> {
     return this.queue.length > 0 || Object.keys(this._busy).length > 0;
   }
 
-  enqueue(workItem: WorkItem, resolve: (data: any) => void) {
-    this.queue.push([workItem, resolve]);
+  enqueue<K extends keyof T & string>(name: K, params: Parameters<T[K]>[0], resolve: (data: any) => void) {
+    this.queue.push([{ name, params }, resolve]);
     this.pumpQueue();
   }
 
