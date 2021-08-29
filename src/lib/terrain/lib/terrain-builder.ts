@@ -18,8 +18,6 @@ export interface TerrainMeshParams {
   settings: MeshGeneratorSettings
 }
 
-
-
 export interface MeshData {
   positions: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
   colors: number | Iterable<number> | ArrayLike<number> | ArrayBuffer;
@@ -79,11 +77,11 @@ export function buildTerrainMeshData({ resolution, offset, width, height, height
   return { indices, positions, uvs, normals, colors };
 }
 
-export function buildPlanetMeshData({ origin, radius, localUp, resolution, offset, width, height, heightGenerator, colorGenerator, settings }: TerrainMeshParams & {
+export function buildPlanetMeshData({ origin, chunkRadius, planetRadius, localUp, resolution, offset, width, height, heightGenerator, colorGenerator, settings }: TerrainMeshParams & {
   origin: THREE.Vector3;
-  // worldMatrix: THREE.Matrix4;
   localUp: THREE.Vector3;
-  radius: number;
+  chunkRadius: number;
+  planetRadius: number;
 }) {
   const positions = [];
   const uvs = [];
@@ -104,8 +102,7 @@ export function buildPlanetMeshData({ origin, radius, localUp, resolution, offse
         .add(axisA.clone().multiplyScalar((xp - 0.5))
           .add(axisB.clone().multiplyScalar((zp - 0.5)))
           .multiplyScalar(2)
-          // .normalize()
-          .multiplyScalar(radius))
+          .multiplyScalar(chunkRadius)).normalize().multiplyScalar(planetRadius);
 
 
       const y = heightGenerator.get(pointOnPlanet.x, pointOnPlanet.y, pointOnPlanet.z);

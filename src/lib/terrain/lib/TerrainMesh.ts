@@ -8,14 +8,6 @@ import type { Builder } from "./terrain-builder.worker";
 import { NoiseGenerator } from "@/noise";
 import { WorkerThreadPool } from "../../threading";
 
-export const DIRECTIONS = {
-  UP: new THREE.Vector3(0, 1, 0),
-  DOWN: new THREE.Vector3(0, -1, 0),
-  LEFT: new THREE.Vector3(-1, 0, 0),
-  RIGHT: new THREE.Vector3(1, 0, 0),
-  FRONT: new THREE.Vector3(0, 0, 1),
-  BACK: new THREE.Vector3(0, 0, -1),
-};
 
 export let workerPool = new WorkerThreadPool<Builder>(4, () => new TerrainBuilderWorker())
 

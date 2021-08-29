@@ -36,8 +36,7 @@ export class QuadTreeNode {
   }
 
   distanceToPlayer() {
-    let distanceToPlayer = 100;
-
+    let distanceToPlayer = 500;
     return distanceToPlayer;
   }
 
@@ -45,10 +44,14 @@ export class QuadTreeNode {
     // If the detail level is under max level and above 0. Max level depends on how many detail levels are defined in planets and needs to be changed manually.
     let distanceToPlayer = this.distanceToPlayer();
 
-    if (this.detailLevel < this.planetConfig.detailLevelDistances.length &&
-      this.detailLevel >= 0) {
-      if (distanceToPlayer <=
-        this.planetConfig.detailLevelDistances[this.detailLevel]) {
+    if (
+      this.detailLevel < this.planetConfig.detailLevelDistances.length &&
+      this.detailLevel >= 0
+    ) {
+      if (
+        distanceToPlayer <=
+        this.planetConfig.detailLevelDistances[this.detailLevel]
+      ) {
         // Assign the chunks children (grandchildren not included).
         // Position is calculated on a cube and based on the fact that each child has 1/2 the radius of the parent
         // Detail level is increased by 1. This doesn't change anything itself, but rather symbolizes that something HAS been changed (the detail).
@@ -107,7 +110,6 @@ export class QuadTreeNode {
           ),
         ];
 
-        // new QuadThreeChunk(planetScript, [], this, position + axisA * radius / 2 + axisB * radius / 2, radius / 2, detailLevel + 1, localUp, axisA, axisB), new QuadThreeChunk(planetScript, new Chunk[0], this, position + axisA * radius / 2 - axisB * radius / 2, radius / 2, detailLevel + 1, localUp, axisA, axisB), new QuadThreeChunk(planetScript, new Chunk[0], this, position - axisA * radius / 2 + axisB * radius / 2, radius / 2, detailLevel + 1, localUp, axisA, axisB), new QuadThreeChunk(planetScript, new Chunk[0], this, position - axisA * radius / 2 - axisB * radius / 2, radius / 2, detailLevel + 1, localUp, axisA, axisB)]
         this.children.forEach((child) => {
           child.generateChildren();
         });
@@ -132,15 +134,11 @@ export class QuadTreeNode {
   updateChunk() {
     let distanceToPlayer = this.distanceToPlayer();
 
-    // Vector3.Distance(
-    //   planetScript.transform.TransformDirection(
-    //     position.normalized * planetScript.size
-    //   ) + planetScript.transform.position,
-    //   planetScript.player.position
-    // );
     if (this.detailLevel <= this.planetConfig.detailLevelDistances.length) {
-      if (distanceToPlayer >
-        this.planetConfig.detailLevelDistances[this.detailLevel]) {
+      if (
+        distanceToPlayer >
+        this.planetConfig.detailLevelDistances[this.detailLevel]
+      ) {
         this.children = [];
       } else {
         if (this.children.length > 0) {

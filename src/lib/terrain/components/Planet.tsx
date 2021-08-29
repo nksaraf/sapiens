@@ -7,15 +7,16 @@ import {
 } from "../lib/height-generator";
 import { COLORS, HyposymetricTintsGenerator } from "../lib/color-generator";
 import { spline } from "@/leva-spline/Spline";
-import { DIRECTIONS } from "../lib/TerrainMesh";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { TerrainMaterial } from "./TerrainMaterial";
 import {
+  DIRECTIONS,
   PlanetMesh as PlanetMeshImpl,
   PlanetMeshProps,
 } from "../lib/PlanetMesh";
 import { QuadTreeNode } from "../lib/QuadTreeNode";
+import { folder } from "leva";
 
 let constantHeightGen = new FixedHeightGenerator({ height: 0 });
 
@@ -45,7 +46,7 @@ export function PlanetMesh(
     props.colorGenerator,
     props.width,
     props.height,
-    props.radius,
+    props.chunkRadius,
     props.offset,
     props.settings,
     mesh,
@@ -122,29 +123,33 @@ export const useColorGenerator = (params: NoiseParams = biomeNoiseParams) => {
   return colorGenerator;
 };
 
-function PlanetFace(props: PlanetMeshProps) {
+function PlanetFace({
+  radius = 100,
+  direction = "UP",
+  ...props
+}: PlanetSphereProps & { direction: keyof typeof DIRECTIONS }) {
+  let localUp = props.localUp ?? DIRECTIONS[direction];
   const tree = React.useMemo(() => {
     let chunk = new QuadTreeNode(
       {
-        position: new THREE.Vector3(0, 0, 0),
+        position: new THREE.Vector3(0, -100, 0),
         size: 100,
         detailLevelDistances: [320, 40, 10],
       },
       [],
       undefined,
-      props.radius ?? 100,
+      radius,
       0,
-      (props.localUp as THREE.Vector3).clone().normalize().multiplyScalar(100),
+      (localUp as THREE.Vector3).clone().normalize().multiplyScalar(radius),
       64,
-      props.localUp as THREE.Vector3
+      localUp as THREE.Vector3
     );
 
-    console.log(chunk);
     chunk.updateChunk();
     let visibleChildren = chunk.getVisibleChildren();
     console.log(visibleChildren);
     return visibleChildren;
-  }, [props.localUp, props.radius]);
+  }, [localUp, radius]);
 
   useFrame(() => {});
 
@@ -153,33 +158,31 @@ function PlanetFace(props: PlanetMeshProps) {
       {tree.map((child) => (
         <PlanetMesh
           {...props}
+          localUp={localUp}
           offset={child.position}
-          radius={child.radius}
-          // resolution={1}
+          chunkRadius={child.radius}
+          planetRadius={radius}
         />
       ))}
-      {/* <TerrainSphereMesh
-        // offset={child.position}
-        // radius={child.radius}
-        // resolution={1}
-        {...props}
-        {...useControls("planet", {
-          radius: 100,
-          offset: [child.position.x, child.position.y, child.position.z],
-        })}
-      /> */}
     </>
   );
 }
 
-export function PlanetSphere(props: PlanetMeshProps) {
+type PlanetSphereProps = Omit<
+  PlanetMeshProps,
+  "chunkRadius" | "planetRadius"
+> & {
+  radius: number;
+};
+
+export function PlanetSphere(props: PlanetSphereProps) {
   return (
     <>
       {Object.keys(DIRECTIONS).map((key) => (
         <PlanetFace
           {...props}
           key={key}
-          localUp={DIRECTIONS[key as keyof typeof DIRECTIONS]}
+          direction={key as keyof typeof DIRECTIONS}
         />
       ))}
       {/* <TerrainFace {...props} localUp={DIRECTIONS.BACK} /> */}
@@ -193,7 +196,7 @@ export interface PlanetConfig {
   detailLevelDistances: number[];
 }
 
-export function Planet(props: PlanetMeshProps & PlanetConfig) {
+export function Planet(props: PlanetSphereProps) {
   const colorGenerator = useColorGenerator({
     octaves: 2,
     persistence: 0.5,
@@ -216,11 +219,21 @@ export function Planet(props: PlanetMeshProps & PlanetConfig) {
     seed: 1,
   });
 
+  const { worker, ...settings } = useControls("planet", {
+    settings: folder({
+      applyHeight: true,
+      applyColor: true,
+      debugColor: [0.5, 0.5, 0.5],
+    }),
+    worker: true,
+  });
+
   return (
     <PlanetSphere
       heightGenerator={heightGenerator}
       colorGenerator={colorGenerator}
-      worker={true}
+      worker={worker}
+      settings={settings}
       {...props}
     />
   );

@@ -89,10 +89,10 @@ export default function TerrainDemo() {
         azimuth={0.25}
       />
       <Planet
-        {...useControls("terrain", {
+        {...useControls("planet", {
           resolution: 64,
-          applyHeight: true,
           radius: { value: 100, min: 1, max: 500 },
+          position: { value: [0, -100, 0], step: 1 },
         })}
       />
       <axesHelper scale={[100, 100, 100]} />
