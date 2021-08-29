@@ -1,4 +1,4 @@
-import { NoiseGenerator, NoiseParams } from "../noise";
+import { NoiseGenerator, NoiseParams } from "../../noise";
 
 export class FixedHeightGenerator implements HeightGenerator {
   params: { height: number } = { height: 0 }

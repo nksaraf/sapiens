@@ -7,20 +7,27 @@ import {
   createPlugin,
   useTh,
   colord,
+  styled,
 } from "leva/plugin";
 import React from "react";
 import * as props from "./spline-plugin";
 import { Color } from "./Color";
 import { PickerContainer } from "./StyledColor";
-import { SplineInternalPoint, SplinePoint, SplineProps } from "./spline-types";
+import {
+  GradientInternalPoint,
+  GradientPoint,
+  GradientProps,
+} from "./spline-types";
 import { RangeSlider } from "./RangeSlider";
+import { RangeGrid } from "./StyledNumber";
+import { DragHandleDots2Icon, PlusIcon } from "@radix-ui/react-icons";
+import { Folder } from "./Folder";
 
 const { Label, Row, String, Number } = Components;
 
 export function ColorComponent() {
-  const { value, displayValue, label, onChange, onUpdate, settings } =
-    useInputContext<SplineProps>();
-  console.log(displayValue);
+  const { value, label, onChange, onUpdate, settings } =
+    useInputContext<GradientProps>();
 
   const accentColor = useTh("colors", "accent1");
 
@@ -32,115 +39,150 @@ export function ColorComponent() {
 
       _ctx.clearRect(0, 0, width, height);
       let gradient = _ctx.createLinearGradient(5, 0, width - 10, 0);
-      displayValue.forEach(([d, i]) => {
+      value.forEach(([d, i]) => {
         gradient.addColorStop(i, d);
       });
       _ctx.fillStyle = gradient;
       _ctx.fillRect(5, 0, width - 10, height - 20);
       _ctx.fillStyle = accentColor;
-      displayValue.forEach(([d, i]) => {
+      value.forEach(([d, i]) => {
         _ctx.fillRect((width - 10) * i, height - 12, 10, 10);
       });
     },
-    [displayValue, accentColor]
+    [value, accentColor]
   );
+
   const [canvas, ctx] = useCanvas2d(drawSpline);
   const updateSpline = React.useMemo(
     () => debounce(() => drawSpline(canvas.current!, ctx.current!), 250),
     [canvas, ctx, drawSpline]
   );
 
-  // const onSplineChange = React.useCallback((v, i) => {
-  //   let val = [...value];
-  // });
-
   React.useEffect(() => updateSpline(), [updateSpline]);
+
+  function setColorStopWeight(index: any, v: any) {
+    onUpdate([
+      ...value.map((a, i) =>
+        i === index ? [a[0], Math.min(Math.max(v, 0), 1.0)] : [...a]
+      ),
+    ]);
+  }
+
+  function setColorStop(index: any, v: any) {
+    onUpdate([
+      ...value.map((a, i) =>
+        i === index
+          ? [
+              props.convert(colord(v), {
+                hasAlpha: false,
+                isString: true,
+                format: "hex",
+              }),
+              a[1],
+            ]
+          : [...a]
+      ),
+    ]);
+  }
+
   return (
-    <Row dir="column">
-      <canvas className="h-full w-full" ref={canvas} />
-      {value.map(([v, i], index) => (
-        <Row input key={index}>
-          <Label>{label}</Label>
-          <Row dir="column">
-            <PickerContainer>
-              <Color
-                value={v.value}
-                displayValue={displayValue[index][0]}
-                onChange={(v) => {
-                  onChange((val: SplinePoint[]) => {
-                    val[index][0] = v;
-                    return [...val];
-                  });
-                }}
-                onUpdate={(v) => {
-                  onUpdate((val: SplineInternalPoint[]) => {
-                    val[index][0].value = props.convert(colord(v), {
-                      // ...a.settings,
-                      hasAlpha: false,
-                      isString: true,
-                      format: "hex",
-                    });
-                    return [...val.map(([pt, i]) => [{ ...pt }, i])];
-                  });
-                }}
-                settings={v.settings}
-              />
-              <String
-                displayValue={displayValue[index][0]}
-                onChange={(v) => {
-                  onChange((val: SplinePoint[]) => {
-                    val[index][0] = v;
-                    return [...val];
-                  });
-                }}
-                onUpdate={(v) => {
-                  onUpdate((val: SplineInternalPoint[]) => {
-                    val[index][0].value = props.convert(colord(v), {
-                      // ...a.settings,
-                      hasAlpha: false,
-                      isString: true,
-                      format: "hex",
-                    });
-                    return [...val.map(([pt, i]) => [{ ...pt }, i])];
-                  });
-                }}
-              />
-            </PickerContainer>
-            <RangeSlider
-              onDrag={(v) => {
-                onUpdate((val: SplineInternalPoint[]) => {
-                  val[index][1] = v;
-                  return [...val.map(([pt, i]) => [{ ...pt }, i])];
-                });
-              }}
-              pad={0.01}
-              initialValue={value[index][1]}
-              min={0}
-              max={1}
-              step={0.01}
-              value={value[index][1]}
-            />
-          </Row>
+    <Folder name="spline" collapsed={true}>
+      {(toggled) => (
+        <Row dir="column" className="space-y-2">
+          <canvas className="h-full w-full" ref={canvas} />
+          {toggled
+            ? value.map(([color, weight], index) => (
+                <div
+                  className="flex flex-row w-full items-center space-x-2"
+                  key={index}
+                >
+                  <div className="flex flex-row">
+                    <DragHandleDots2Icon className="w-4" />
+                    {/* <Label>{label}</Label> */}
+                  </div>
+                  <div className="flex flex-col space-y-1 w-full">
+                    <PickerContainer>
+                      <Color
+                        value={color}
+                        displayValue={color}
+                        onChange={(newColor) => setColorStop(index, newColor)}
+                        onUpdate={(newColor) => setColorStop(index, newColor)}
+                        settings={{
+                          format: "hex",
+                          hasAlpha: false,
+                          isString: true,
+                        }}
+                      />
+                      <String
+                        displayValue={color}
+                        onChange={(newColor) => setColorStop(index, newColor)}
+                        onUpdate={(newColor) => setColorStop(index, newColor)}
+                      />
+                    </PickerContainer>
+                    <RangeGrid hasRange={true}>
+                      <RangeSlider
+                        onDrag={(v) => setColorStopWeight(index, v)}
+                        pad={0.01}
+                        initialValue={0.0}
+                        min={0.0}
+                        max={1}
+                        step={0.075}
+                        value={weight}
+                      />
+                      <Number
+                        value={weight}
+                        displayValue={weight}
+                        settings={{
+                          min: 0.0,
+                          max: 1.0,
+                          step: 0.075,
+                          initialValue: 0.0,
+                          pad: 0.01,
+                        }}
+                        label="w"
+                        innerLabelTrim={1}
+                        onChange={(v) => setColorStopWeight(index, v)}
+                        onUpdate={(v) => setColorStopWeight(index, v)}
+                      />
+                    </RangeGrid>
+                  </div>
+                </div>
+              ))
+            : null}
+          <StyledButton
+            onClick={() => {
+              onUpdate([...value, ["#000000", 1.0]]);
+            }}
+            className="space-x-2"
+          >
+            <PlusIcon />
+            Add Stop
+          </StyledButton>
         </Row>
-      ))}
-    </Row>
+      )}
+    </Folder>
   );
 }
+
+export const StyledButton = styled("button", {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  $reset: "",
+  fontWeight: "$button",
+  color: "$highlight3",
+  rowGap: "$sm",
+  height: "$rowHeight",
+  borderStyle: "none",
+  borderRadius: "$sm",
+  backgroundColor: "$accent2",
+  cursor: "pointer",
+  $hover: "$accent3",
+  $active: "$accent3 $accent1",
+  $focus: "",
+});
 
 export const spline = createPlugin({
   component: ColorComponent,
   ...props,
 });
-
-export function Spline() {
-  const controls = useControls("spline", {
-    spline: spline({
-      value: [
-        ["#abcdef", 0],
-        ["#000000", 0.5],
-        ["#abcd10", 1.0],
-      ],
-    }),
-  });
-  return null;
-}

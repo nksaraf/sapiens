@@ -1,15 +1,16 @@
 import { useControls } from "leva";
 import React from "react";
 import { TerrainMesh } from "./components";
-import { useTerrainGenerator } from "./Demo";
+import { useColorGenerator, useHeightGenerator } from "./Planet";
 
 export function TerrainPlane({
   width = 1000,
   height = 1000,
-  chunkSize = 500,
-  resolution = 100,
+  chunkSize = 250,
+  resolution = 64,
 }) {
-  const { colorGenerator, heightGenerator } = useTerrainGenerator();
+  const colorGenerator = useColorGenerator();
+  const heightGenerator = useHeightGenerator();
 
   let chunksX = Math.ceil(width / chunkSize);
   let chunksZ = Math.ceil(height / chunkSize);

@@ -1,16 +1,23 @@
 import * as THREE from "three";
-import { ColorGenerator, COLORS, FixedColourGenerator, HyposymetricTintsGenerator } from "./color-generator";
-import { FixedHeightGenerator, HeightGenerator, NoisyHeightGenerator } from "./height-generator";
-import * as Comlink from "comlink";
-import { Vector3 } from "@react-three/fiber";
-import { buildMeshData, buildSphereFaceData, MeshData, TerrainMeshParams } from "./terrain-builder";
+import { ColorGenerator, HyposymetricTintsGenerator } from "./color-generator";
+import { HeightGenerator, NoisyHeightGenerator } from "./height-generator";
+import { Object3DNode, Vector3 } from "@react-three/fiber";
+import { buildTerrainMeshData, MeshData, MeshGeneratorSettings, TerrainMeshParams } from "./terrain-builder";
 import TerrainBuilderWorker from './terrain-builder.worker?worker'
-import type { Builder, TerrainMeshWorkerParams } from "./terrain-builder.worker";
-import { NoiseGenerator, NoiseParams } from "@/noise";
-import { WorkerThreadPool } from "../threading";
-import { DIRECTIONS } from "./TerrainSphere";
+import type { Builder } from "./terrain-builder.worker";
+import { NoiseGenerator } from "@/noise";
+import { WorkerThreadPool } from "../../threading";
 
-let workerPool = new WorkerThreadPool<Builder>(4, () => new TerrainBuilderWorker())
+export const DIRECTIONS = {
+  UP: new THREE.Vector3(0, 1, 0),
+  DOWN: new THREE.Vector3(0, -1, 0),
+  LEFT: new THREE.Vector3(-1, 0, 0),
+  RIGHT: new THREE.Vector3(1, 0, 0),
+  FRONT: new THREE.Vector3(0, 0, 1),
+  BACK: new THREE.Vector3(0, 0, -1),
+};
+
+export let workerPool = new WorkerThreadPool<Builder>(4, () => new TerrainBuilderWorker())
 
 export class TerrainMesh extends THREE.Mesh {
   width: number;
@@ -20,7 +27,11 @@ export class TerrainMesh extends THREE.Mesh {
   colorGenerator: ColorGenerator;
   offset: Vector3
   worker: boolean = false
-  applyHeight: boolean = true
+  settings: MeshGeneratorSettings = {
+    applyHeight: true,
+    applyColor: true,
+    debugColor: [0, 0, 0]
+  }
 
   constructor(params: Partial<TerrainMeshParams> = {}) {
     super(new THREE.BufferGeometry());
@@ -38,7 +49,8 @@ export class TerrainMesh extends THREE.Mesh {
         seed: 2,
         exponentiation: 1,
         height: 1.0,
-      })
+      }),
+      spline: [["#000000", 0.0], ["#FFFFFF", 1.0]]
     });
     this.offset = params.offset ?? new THREE.Vector3()
   }
@@ -78,84 +90,36 @@ export class TerrainMesh extends THREE.Mesh {
   update() {
     if (this.worker) {
       let offset = (this.offset as THREE.Vector3).toArray();
-      workerPool.enqueue("buildMeshData", {
+      workerPool.enqueue("buildTerrainMeshData", {
         width: this.width,
         height: this.height,
         resolution: this.resolution,
         offset: offset,
         heightGenerator: this.heightGenerator.params as any,
         colorGenerator: this.colorGenerator.params as any,
-        applyHeight: this.applyHeight,
+        settings: this.settings,
       }, (data) => {
         this.updateFromData(data);
       })
     }
     else {
-      this.updateFromData(buildMeshData({
+      this.updateFromData(buildTerrainMeshData({
         width: this.width,
         height: this.height,
         resolution: this.resolution,
         offset: this.offset as THREE.Vector3,
         heightGenerator: this.heightGenerator,
         colorGenerator: this.colorGenerator,
-        applyHeight: this.applyHeight
+        settings: this.settings
       }));
     }
   }
 }
 
-export interface TerrainSphereMeshParams extends TerrainMeshParams {
-  origin: Vector3
-  radius: number;
-  localUp: Vector3
-}
-
-export class TerrainSphereMesh extends TerrainMesh {
-  origin: Vector3;
-  radius: number;
-  localUp: Vector3
-  constructor(params: Partial<TerrainSphereMeshParams> = {}) {
-    super(params);
-    this.origin = params.origin ?? new THREE.Vector3(0, 0, 0);
-    this.radius = params.radius ?? 500;
-    this.localUp = params.localUp ?? DIRECTIONS.UP.clone();
-  }
-
-  update() {
-    if (this.worker) {
-      let offset = (this.offset as THREE.Vector3).toArray();
-      workerPool.enqueue('buildSphereMeshData',
-        {
-          width: this.width,
-          height: this.height,
-          resolution: this.resolution,
-          offset: (this.offset as THREE.Vector3).toArray(),
-          heightGenerator: this.heightGenerator.params as any,
-          colorGenerator: this.colorGenerator.params as any,
-          applyHeight: this.applyHeight,
-          origin: (this.origin as THREE.Vector3).toArray(),
-          radius: this.radius,
-          localUp: (this.localUp as THREE.Vector3).toArray(),
-        }, (data) => {
-          this.updateFromData(data);
-        })
-    }
-    else {
-      this.updateFromData(buildSphereFaceData({
-        width: this.width,
-        height: this.height,
-        resolution: this.resolution,
-        offset: this.offset as THREE.Vector3,
-        heightGenerator: this.heightGenerator,
-        colorGenerator: this.colorGenerator,
-        applyHeight: this.applyHeight,
-        origin: this.origin as THREE.Vector3,
-        radius: this.radius,
-        localUp: this.localUp as THREE.Vector3,
-      }));
-    }
-  }
-}
+export type TerrainMeshProps = Object3DNode<
+  TerrainMesh,
+  typeof TerrainMesh
+>;
 
 
 

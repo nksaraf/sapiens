@@ -1,6 +1,7 @@
+import { GradientInternalPoint, GradientPoint } from "@/leva-spline/spline-types";
 import { math } from "@/math";
 import { NoiseGenerator, NoiseParams } from "@/noise";
-import { LinearSpline } from "@/spline";
+import { ColorLinearSpline, getColorSplineValue, getSplineValue, LinearSpline, SplinePoint, SplinePoints } from "@/spline";
 import * as THREE from "three";
 
 export const COLORS = {
@@ -33,25 +34,19 @@ export class FixedColourGenerator implements ColorGenerator {
 }
 
 
-function colorLerp(t: number, p0: THREE.Color, p1: THREE.Color) {
-  const c = p0.clone();
-  return c.lerp(p1, t);
-};
+
 
 
 export interface TextureSplatterRawParams {
   biomeNoiseGenerator: NoiseGenerator
   colorNoiseGenerator: NoiseGenerator
+  spline: GradientInternalPoint[]
 }
 
 export interface TextureSplatterParams extends TextureSplatterRawParams {
-  splines: {
-    ocean: LinearSpline,
-    arid: LinearSpline,
-    humid: LinearSpline,
-  }
   minElevation: number;
-  maxElevation: number
+  maxElevation: number;
+  colorSpline: SplinePoint<THREE.Color>[]
 }
 
 export class HyposymetricTintsGenerator implements ColorGenerator<{
@@ -60,50 +55,49 @@ export class HyposymetricTintsGenerator implements ColorGenerator<{
   _params: TextureSplatterParams;
   constructor(params: Partial<TextureSplatterRawParams>) {
     // Arid
-    const aridSpline = new LinearSpline(colorLerp);
-    aridSpline.AddPoint(0.0, new THREE.Color(0xb7a67d));
-    aridSpline.AddPoint(0.5, new THREE.Color(0xf1e1bc));
-    aridSpline.AddPoint(1.0, COLORS.SNOW);
+    // const aridSpline = new ColorLinearSpline();
+    // aridSpline.AddPoint(0.0, new THREE.Color(0xb7a67d));
+    // aridSpline.AddPoint(0.5, new THREE.Color(0xf1e1bc));
+    // aridSpline.AddPoint(1.0, COLORS.SNOW);
 
-    // Humid
-    const humidSpline = new LinearSpline(colorLerp);
-    humidSpline.AddPoint(0.0, COLORS.FOREST_BOREAL);
-    humidSpline.AddPoint(0.5, new THREE.Color(0xcee59c));
-    humidSpline.AddPoint(1.0, COLORS.SNOW);
+    // // Humid
+    // const humidSpline = new LinearSpline(colorLerp);
+    // humidSpline.AddPoint(0.0, COLORS.FOREST_BOREAL);
+    // humidSpline.AddPoint(0.5, new THREE.Color(0xcee59c));
+    // humidSpline.AddPoint(1.0, COLORS.SNOW);
 
 
-    // Ocean
-    const oceanSpline = new LinearSpline(colorLerp);
-    oceanSpline.AddPoint(0.0, COLORS.DEEP_OCEAN);
-    oceanSpline.AddPoint(0.03, COLORS.SHALLOW_OCEAN);
-    oceanSpline.AddPoint(0.05, COLORS.SHALLOW_OCEAN);
+    // // Ocean
+    // const oceanSpline = new LinearSpline(colorLerp);
+    // oceanSpline.AddPoint(0.0, COLORS.DEEP_OCEAN);
+    // oceanSpline.AddPoint(0.03, COLORS.SHALLOW_OCEAN);
+    // oceanSpline.AddPoint(0.05, COLORS.SHALLOW_OCEAN);
 
     this._params = params as TextureSplatterParams;
-    this._params.splines = {
-      ocean: oceanSpline,
-      arid: aridSpline,
-      humid: humidSpline,
-    };
+    this._params.colorSpline = this._params.spline.map(([pt, i]) => [i, new THREE.Color(pt)] as SplinePoint<THREE.Color>);
   }
 
   getColor(x: any, y: any, height: number) {
-    const m = this._params.biomeNoiseGenerator.get(x, y, height);
+    // const m = this._params.biomeNoiseGenerator.get(x, y, height);
     const h = math.sat(height);
 
-    const c1 = this._params.splines.arid.Get(h);
-    const c2 = this._params.splines.humid.Get(h);
 
-    let c = c1.lerp(c2, m);
+    // const c1 = this._params.splines.arid.Get(h);
+    // const c2 = this._params.splines.humid.Get(h);
 
-    if (h < 0.1) {
-      return this._params.splines.ocean.Get(h)
-    }
-    return c;
+    // let c = c1.lerp(c2, m);
+
+    // if (h < 0.1) {
+    //   return this._params.splines.ocean.Get(h)
+    // }
+    return getColorSplineValue(this._params.colorSpline, h);
+    // return this._params.spline.Get(h);
   }
 
   get params() {
     return {
-      biomeNoiseGenerator: this._params.biomeNoiseGenerator.params
+      biomeNoiseGenerator: this._params.biomeNoiseGenerator.params,
+      spline: this._params.spline,
     }
   }
 }

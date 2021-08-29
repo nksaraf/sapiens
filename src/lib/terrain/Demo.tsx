@@ -1,62 +1,21 @@
 import { useNoiseGenerator } from "@/noise";
 import { useFrame, useThree } from "@react-three/fiber";
-import { folder, useControls, LevaInputs } from "leva";
+import { useControls } from "../useControls";
 import React from "react";
 import * as THREE from "three";
-import { HyposymetricTintsGenerator } from "./color-generator";
-import { NoisyHeightGenerator } from "./height-generator";
-import { PerspectiveCamera, Sky, Sphere, useHelper } from "@react-three/drei";
+import { HyposymetricTintsGenerator } from "./lib/color-generator";
+import { NoisyHeightGenerator } from "./lib/height-generator";
+import {
+  PerspectiveCamera,
+  Sky,
+  Sphere,
+  OrbitControls,
+} from "@react-three/drei";
 import { useKeyboardInput } from "src/Keyboard";
-import { InfiniteTerrain, QuadTreeTerrain } from "./InfiniteTerrain";
-import { Planet } from "./TerrainSphere";
+import { Planet } from "./components/Planet";
 import { createStore } from "../store";
-import { OrbitControls } from "@react-three/drei";
-import { TerrainPlane } from "./TerrainPlane";
 import { TransformControls } from "@react-three/drei";
-import { BoxHelper } from "three";
-
-const terrainNoiseParams = {
-  octaves: 10,
-  persistence: 0.5,
-  lacunarity: 1.6,
-  exponentiation: 7.5,
-  height: 900.0,
-  scale: 1400.0,
-  noiseType: "simplex",
-  seed: 1,
-} as const;
-
-const biomeNoiseParams = {
-  octaves: 2,
-  persistence: 0.5,
-  lacunarity: 2.0,
-  scale: 2048.0,
-  noiseType: "simplex",
-  seed: 2,
-  exponentiation: 1,
-  height: 1.0,
-} as const;
-
-export const useTerrainGenerator = () => {
-  const terrainNoiseGenerator = useNoiseGenerator(
-    "terrain",
-    terrainNoiseParams
-  );
-
-  const biomeNoiseGenerator = useNoiseGenerator("biome", biomeNoiseParams);
-
-  const colorGenerator = React.useMemo(() => {
-    return new HyposymetricTintsGenerator({
-      biomeNoiseGenerator,
-    });
-  }, [biomeNoiseGenerator]);
-
-  const heightGenerator = React.useMemo(() => {
-    return new NoisyHeightGenerator(terrainNoiseGenerator);
-  }, [terrainNoiseGenerator]);
-
-  return { colorGenerator, heightGenerator };
-};
+import { QuadTreeTerrain } from "./components/InfiniteTerrain";
 
 export const useViewer = createStore({
   position: new THREE.Vector3(0, 50, 0),
@@ -102,19 +61,6 @@ function PlayerCamera() {
   );
 }
 
-import {
-  createPlugin,
-  useInput,
-  useInputContext,
-  Components,
-  useValue,
-  useCanvas2d,
-  debounce,
-} from "leva/plugin";
-import { PickerContainer } from "@/leva-spline/StyledColor";
-import { Color } from "@/leva-spline/Color";
-import { Spline } from "@/leva-spline/Spline";
-
 export default function TerrainDemo() {
   return (
     <>
@@ -128,7 +74,7 @@ export default function TerrainDemo() {
           resolution: 64,
         })}
       /> */}
-      <Spline />
+      <gridHelper args={[300, 30]} />
       <PerspectiveCamera
         makeDefault
         position={[0, 300, -300]}

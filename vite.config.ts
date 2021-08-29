@@ -4,7 +4,7 @@ import windicss from "vite-plugin-windicss";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [reactRefresh(), windicss(), tsconfigPaths()],
+  plugins: [tsconfigPaths(), reactRefresh(), windicss(),],
   server: {
     hmr: {
       // port: 443

@@ -1,7 +1,8 @@
 import { useHelper } from "@react-three/drei";
-import React, { useRef } from "react";
-import { useControls } from "leva";
+import { useRef } from "react";
 import { DirectionalLightHelper, SpotLightHelper } from "three";
+import React from "react";
+import { useControls } from "./lib/useControls";
 
 export function Light() {
   let ref = useRef();

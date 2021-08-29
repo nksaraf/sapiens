@@ -1,8 +1,9 @@
 import { extend, Node } from "@react-three/fiber";
-import { folder, useControls } from "leva";
+import { folder } from "leva";
 import React from "react";
 import SimplexNoise from "simplex-noise";
 import * as perlin from "./perlin";
+import { useControls } from "./useControls";
 
 export interface NoiseFunction {
   noise2D(x: number, y: number): number;

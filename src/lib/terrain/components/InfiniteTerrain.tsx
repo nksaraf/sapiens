@@ -2,11 +2,13 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import React from "react";
 import * as THREE from "three";
-import { TerrainMesh as ThreeTerrainMesh } from "./TerrainMesh";
-import { useTerrainGenerator, useViewer } from "./Demo";
-import { TerrainMaterial, TerrainMesh, TerrainMeshProps } from "./components";
+import { TerrainMesh as ThreeTerrainMesh } from "../lib/TerrainMesh";
+import { useViewer } from "../Demo";
+import { TerrainMesh, TerrainMeshProps } from "./components";
+import { TerrainMaterial } from "./TerrainMaterial";
 import { QuadTree2 } from "@/quadtree";
-import { utils } from "./utils";
+import { utils } from "../utils";
+import { useColorGenerator, useHeightGenerator } from "./Planet";
 
 function getCellIndex(p: THREE.Vector3, chunkSize: number) {
   const xp = p.x + chunkSize * 0.5;
@@ -21,7 +23,8 @@ export function InfiniteTerrain({
   chunkSize = 200,
   resolution = 64,
 }) {
-  const { heightGenerator, colorGenerator } = useTerrainGenerator();
+  const heightGenerator = useHeightGenerator();
+  const colorGenerator = useColorGenerator();
 
   const [chunks, setChunks] = React.useState(
     () =>
@@ -152,7 +155,27 @@ export function QuadTreeTerrain({
   // chunkSize = 200,
   resolution = 64,
 }) {
-  const { heightGenerator, colorGenerator } = useTerrainGenerator();
+  const heightGenerator = useHeightGenerator({
+    octaves: 10,
+    persistence: 0.5,
+    lacunarity: 1.6,
+    exponentiation: 7.5,
+    height: 900.0,
+    scale: 1400.0,
+    noiseType: "simplex",
+    seed: 1,
+  });
+
+  const colorGenerator = useColorGenerator({
+    octaves: 2,
+    persistence: 0.5,
+    lacunarity: 2.0,
+    scale: 2048.0,
+    noiseType: "simplex",
+    seed: 2,
+    exponentiation: 1,
+    height: 1.0,
+  });
 
   interface TerrainChunkParams {
     offset: [number, number, number];
@@ -167,8 +190,6 @@ export function QuadTreeTerrain({
   const [toDelete, setToDelete] = React.useState(
     () => ({} as Record<string, TerrainChunkParams>)
   );
-
-  let ref = React.useRef(``);
 
   useFrame(() => {
     let tree = new QuadTree2({
@@ -200,9 +221,6 @@ export function QuadTreeTerrain({
       return;
     }
 
-    console.log(newChunks);
-
-    console.log(difference, toDelete);
     setChunks(newChunks);
   });
 
@@ -214,12 +232,13 @@ export function QuadTreeTerrain({
           return (
             <TerrainMesh
               key={chunk.key}
-              width={chunk.size}
-              height={chunk.size}
+              width={chunk.size - 10}
+              height={chunk.size - 10}
               offset={chunk.offset}
               resolution={resolution}
               heightGenerator={heightGenerator}
               colorGenerator={colorGenerator}
+              worker={true}
               // maxViewDistance={maxViewDistance}
               frustumCulled={false}
             >
@@ -260,5 +279,3 @@ function TerrainChunk({
     />
   );
 }
-
-

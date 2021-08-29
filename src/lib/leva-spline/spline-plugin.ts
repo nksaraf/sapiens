@@ -1,7 +1,8 @@
 import v8n from 'v8n.ts'
 import { Colord, colord, extend, getFormat } from 'colord'
 import namesPlugin from 'colord/plugins/names'
-import type { InternalColorSettings, Format, ColorInput, SplineInput, SplineInternalPoint } from './spline-types'
+import type { InternalColorSettings, Format, ColorInput, GradientInput, GradientInternalPoint } from './spline-types'
+import * as THREE from 'three'
 
 extend([namesPlugin])
 
@@ -45,12 +46,11 @@ export const sanitizeColor = (v: string, settings: InternalColorSettings) => {
   return convert(color, settings)
 }
 
-export const format = (v: SplineInternalPoint[], settings: InternalColorSettings) => {
-  return v.map(([a, b]) => [convert(colord(a.value), { ...a.settings, isString: true, format: 'hex' }), b])
+export const format = (v: GradientInternalPoint[], settings: InternalColorSettings) => {
+  return v.map(([a, b]) => [convert(colord(a), { format: 'hex', isString: true, hasAlpha: false }), b])
 }
 
-export const normalize = ({ value }: SplineInput) => {
-  console.log(value);
+export const normalize = ({ value }: GradientInput): { value: GradientInternalPoint[] } => {
   let settings;
   let normed = value.map(([v, i]) => {
     const _f = getFormat(v)
@@ -63,13 +63,15 @@ export const normalize = ({ value }: SplineInput) => {
 
     // by santizing the value we make sure the returned value is parsed and fixed,
     // consistent with future updates.
-    return [{ value: sanitizeColor(v, settings), settings }, i] as const
-  }).sort((a, b) => a[1] - b[1])
+    return [sanitizeColor(v, settings), i] as GradientInternalPoint
+  })
+  // .sort((a, b) => a[1] - b[1])
 
 
-  return { value: normed, settings }
+  return { value: normed }
 }
 
-export const sanitize = (v: SplineInternalPoint[], settings: InternalColorSettings) => {
-  return v.sort((a, b) => a[1] - b[1])
-};
+// export const sanitize = (v: SplineInternalPoint[], settings: InternalColorSettings) => {
+
+//   return vsort((a, b) => a[1] - b[1])
+// };
