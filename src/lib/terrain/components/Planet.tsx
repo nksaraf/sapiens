@@ -129,11 +129,13 @@ type PlanetChunkParams = {
   position: THREE.Vector3;
   chunkRadius: number;
   key: string;
+  resolution: number;
 };
 
 function PlanetFace({
   radius = 100,
   direction = "UP",
+  resolution = 64,
   ...props
 }: PlanetSphereProps & { direction: keyof typeof DIRECTIONS }) {
   let localUp = props.localUp ?? DIRECTIONS[direction];
@@ -147,18 +149,18 @@ function PlanetFace({
       {
         position: new THREE.Vector3(0, 0, 0),
         size: 100,
-        detailLevelDistances: [1000, 320, 100, 40, 20, 10],
+        detailLevelDistances: [2500, 1000, 400, 150, 70, 30, 10],
       },
       [],
       undefined,
       radius,
       0,
       (localUp as THREE.Vector3).clone().normalize().multiplyScalar(radius),
-      64,
+      resolution,
       localUp as THREE.Vector3
     );
     return chunk;
-  }, [localUp, radius]);
+  }, [localUp, radius, resolution]);
 
   useFrame(() => {
     const { position } = useViewer.getState();
@@ -172,6 +174,7 @@ function PlanetFace({
         position: child.position,
         chunkRadius: child.radius,
         key: key,
+        resolution: child.resolution,
       };
     }
 
@@ -197,6 +200,7 @@ function PlanetFace({
             localUp={localUp}
             key={key}
             offset={chunk.position}
+            resolution={chunk.resolution}
             chunkRadius={chunk.chunkRadius}
             planetRadius={radius}
           />

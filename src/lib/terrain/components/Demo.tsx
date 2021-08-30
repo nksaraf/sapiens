@@ -2,7 +2,13 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "../../useControls";
 import React from "react";
 import * as THREE from "three";
-import { Sky, Sphere, OrbitControls } from "@react-three/drei";
+import {
+  Sky,
+  Sphere,
+  OrbitControls,
+  FlyControls,
+  PerspectiveCamera,
+} from "@react-three/drei";
 import { useKeyboardInput } from "src/Keyboard";
 import { Planet } from "./Planet";
 import { createStore } from "../../store";
@@ -10,10 +16,84 @@ import { TransformControls } from "@react-three/drei";
 import { Camera, CameraSystem } from "./Camera";
 import { Leva } from "leva";
 import { Vector3 } from "three";
+import { PointerLockControls } from "./PointerLockControls";
 
 export const useViewer = createStore({
-  position: new THREE.Vector3(0, 252, 0),
+  position: new THREE.Vector3(0, 1050, 0),
 });
+
+const velocity = new THREE.Vector3();
+const decceleration = new THREE.Vector3();
+const acceleration = new THREE.Vector3();
+
+function ShipControls() {
+  useFrame((s) => {
+    let timeInSeconds = s.clock.getDelta();
+    const frameDecceleration = new THREE.Vector3(
+      velocity.x * decceleration.x,
+      velocity.y * decceleration.y,
+      velocity.z * decceleration.z
+    );
+    frameDecceleration.multiplyScalar(timeInSeconds);
+    velocity.add(frameDecceleration);
+
+    const _Q = new THREE.Quaternion();
+    const _A = new THREE.Vector3();
+    const _R = controlObject.quaternion.clone();
+
+    const controlObject = this._params.camera;
+
+    const { controls } = useKeyboardInput.getState();
+
+    if (controls.forward) {
+      velocity.z -= 2 ** acceleration.z * timeInSeconds;
+    }
+    if (controls.backward) {
+      velocity.z += 2 ** acceleration.z * timeInSeconds;
+    }
+    if (controls.left) {
+      velocity.x -= 2 ** acceleration.x * timeInSeconds;
+    }
+    if (controls.right) {
+      velocity.x += 2 ** acceleration.x * timeInSeconds;
+    }
+    if (controls.up) {
+      velocity.y += 2 ** acceleration.y * timeInSeconds;
+    }
+    if (controls.down) {
+      velocity.y -= 2 ** acceleration.y * timeInSeconds;
+    }
+    // if (this._move.rocket) {
+    //   this._velocity.z -= this._acceleration.x * timeInSeconds;
+    // }
+
+    controlObject.quaternion.copy(_R);
+
+    const oldPosition = new THREE.Vector3();
+    oldPosition.copy(controlObject.position);
+
+    const forward = new THREE.Vector3(0, 0, 1);
+    forward.applyQuaternion(controlObject.quaternion);
+    //forward.y = 0;
+    forward.normalize();
+
+    const updown = new THREE.Vector3(0, 1, 0);
+
+    const sideways = new THREE.Vector3(1, 0, 0);
+    sideways.applyQuaternion(controlObject.quaternion);
+    sideways.normalize();
+
+    sideways.multiplyScalar(velocity.x * timeInSeconds);
+    updown.multiplyScalar(velocity.y * timeInSeconds);
+    forward.multiplyScalar(velocity.z * timeInSeconds);
+
+    controlObject.position.add(forward);
+    controlObject.position.add(sideways);
+    controlObject.position.add(updown);
+
+    oldPosition.copy(controlObject.position);
+  });
+}
 
 function PlayerCamera() {
   const ref = React.useRef<THREE.Mesh>();
@@ -43,8 +123,8 @@ function PlayerCamera() {
       position.copy(ref.current.position);
     }
 
-    cameraRef.current?.position.copy(position);
-    cameraRef.current?.lookAt(position);
+    // cameraRef.current?.position.copy(position);
+    // cameraRef.current?.lookAt(position);
   });
 
   return (
@@ -61,9 +141,6 @@ function PlayerCamera() {
         camera="perspective"
         ref={cameraRef as React.Ref<THREE.Camera>}
         position={[0, 500, -500]}
-        onUpdate={(camera: THREE.PerspectiveCamera) => {
-          camera.lookAt(useViewer.getState().position);
-        }}
         far={100000}
         near={0.1}
         makeDefault
@@ -73,6 +150,8 @@ function PlayerCamera() {
 }
 
 export default function TerrainDemo() {
+  const camera = useThree((t) => t.camera);
+  console.log(camera);
   return (
     <>
       {/* <QuadTreeTerrain
@@ -86,23 +165,18 @@ export default function TerrainDemo() {
       /> */}
       {/* <gridHelper args={[300, 30]} /> */}
       <CameraSystem>
-        <PlayerCamera />
+        {/* <PlayerCamera /> */}
         <Camera
           name="far back view"
           camera="perspective"
-          position={[0, 600, -600]}
-          far={100000}
+          position={[0, -600, 600]}
+          far={10000}
+          onUpdate={(c: THREE.PerspectiveCamera) => c.lookAt(0, 0, 0)}
           near={0.1}
+          makeDefault
         />
-        <Camera
-          name="far right view"
-          camera="perspective"
-          position={[0, 600, 600]}
-          far={100000}
-          near={0.1}
-        />
-
         {/* <OrbitControls makeDefault /> */}
+        <PointerLockControls />
         <Sky
           distance={4500}
           sunPosition={[0, 20, -200]}
@@ -111,8 +185,8 @@ export default function TerrainDemo() {
         />
         <Planet
           {...useControls("planet", {
-            resolution: 16,
-            radius: { value: 250, min: 1, max: 500 },
+            resolution: 64,
+            radius: { value: 250, min: 1, max: 1000 },
             position: { value: [0, 0, 0], step: 1 },
           })}
         />

@@ -57,6 +57,8 @@ export const useKeyboardInput = create(
         backward: false,
         shift: false,
         space: false,
+        up: false,
+        down: false,
       },
     },
     (set, get) => ({ get, set })
@@ -84,6 +86,14 @@ export function Keyboard() {
       keys: ["ArrowRight", "d", "D"],
       fn: (right) =>
         set((state) => ({ controls: { ...state.controls, right } })),
+    },
+    {
+      keys: ["e", "E"],
+      fn: (down) => set((state) => ({ controls: { ...state.controls, down } })),
+    },
+    {
+      keys: ["Q", "q"],
+      fn: (up) => set((state) => ({ controls: { ...state.controls, up } })),
     },
     {
       keys: [" "],
