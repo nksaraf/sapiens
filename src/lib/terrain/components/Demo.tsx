@@ -2,20 +2,16 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "../../useControls";
 import React from "react";
 import * as THREE from "three";
-import {
-  PerspectiveCamera,
-  Sky,
-  Sphere,
-  OrbitControls,
-} from "@react-three/drei";
+import { Sky, Sphere, OrbitControls } from "@react-three/drei";
 import { useKeyboardInput } from "src/Keyboard";
 import { Planet } from "./Planet";
 import { createStore } from "../../store";
 import { TransformControls } from "@react-three/drei";
-import { QuadTreeTerrain } from "./InfiniteTerrain";
+import { Camera, CameraSystem } from "./Camera";
+import { Leva } from "leva";
 
 export const useViewer = createStore({
-  position: new THREE.Vector3(0, 110, 0),
+  position: new THREE.Vector3(0, 260, 0),
 });
 
 function PlayerCamera() {
@@ -50,7 +46,11 @@ function PlayerCamera() {
   return (
     <>
       <TransformControls>
-        <Sphere ref={ref} args={[10, 10, 10]} position={[0, 110, 0]}>
+        <Sphere
+          ref={ref}
+          args={[10, 10, 10]}
+          position={useViewer.getState().position}
+        >
           <meshStandardMaterial color="red" />
         </Sphere>
       </TransformControls>
@@ -72,27 +72,38 @@ export default function TerrainDemo() {
         })}
       /> */}
       {/* <gridHelper args={[300, 30]} /> */}
-      <PerspectiveCamera
-        makeDefault
-        position={[0, 300, -300]}
-        far={100000}
-        near={0.1}
-      />
-      <OrbitControls makeDefault />
-      <Sky
-        distance={4500}
-        sunPosition={[0, 20, -200]}
-        inclination={0}
-        azimuth={0.25}
-      />
-      <Planet
-        {...useControls("planet", {
-          resolution: 64,
-          radius: { value: 100, min: 1, max: 500 },
-          position: { value: [0, 0, 0], step: 1 },
-        })}
-      />
-      <axesHelper scale={[100, 100, 100]} />
+      <CameraSystem>
+        <Camera
+          name="far back view"
+          camera="perspective"
+          makeDefault
+          position={[0, 600, -600]}
+          far={100000}
+          near={0.1}
+        />
+        <Camera
+          name="far right view"
+          camera="perspective"
+          position={[0, 600, 600]}
+          far={100000}
+          near={0.1}
+        />
+        <OrbitControls makeDefault />
+        <Sky
+          distance={4500}
+          sunPosition={[0, 20, -200]}
+          inclination={0}
+          azimuth={0.25}
+        />
+        <Planet
+          {...useControls("planet", {
+            resolution: 16,
+            radius: { value: 250, min: 1, max: 500 },
+            position: { value: [0, 0, 0], step: 1 },
+          })}
+        />
+        <axesHelper scale={[100, 100, 100]} />
+      </CameraSystem>
     </>
   );
 }

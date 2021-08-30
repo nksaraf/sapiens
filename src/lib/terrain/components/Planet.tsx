@@ -147,7 +147,7 @@ function PlanetFace({
       {
         position: new THREE.Vector3(0, 0, 0),
         size: 100,
-        detailLevelDistances: [320, 100, 40, 10],
+        detailLevelDistances: [1000, 320, 100, 40, 20, 10],
       },
       [],
       undefined,
@@ -157,8 +157,6 @@ function PlanetFace({
       64,
       localUp as THREE.Vector3
     );
-    let { position } = useViewer.getState();
-    chunk.updateChunk(position);
     return chunk;
   }, [localUp, radius]);
 

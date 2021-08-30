@@ -1,6 +1,6 @@
 import { Html, OrbitControls, Sky, Stats } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useControls } from "leva";
+import { Leva, useControls } from "leva";
 import { Toaster } from "react-hot-toast";
 import { atom, Provider } from "jotai";
 import { $ } from "src/atoms";
@@ -39,6 +39,7 @@ export function App() {
     <Provider>
       <div className="h-screen w-screen">
         <Toaster />
+        <Leva collapsed={true} />
         <Canvas shadows>
           <color attach="background" args={["black"]} />
           <TerrainDemo />
