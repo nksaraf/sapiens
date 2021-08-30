@@ -1,6 +1,6 @@
 import { OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import React from "react";
+import React, { forwardRef } from "react";
 import { folder, levaStore } from "leva";
 import { useControls } from "@/useControls";
 import { createStore } from "@/store";
@@ -21,18 +21,27 @@ const ControlledOrthographicCamera = React.forwardRef(
     }));
 
     const controls = useControls("camera", {
-      [name]: folder({
-        orthographic: folder({
-          position: { value: position as [number, number, number], step: 1 },
-          left: { value: -width / 2, step: 1 },
-          right: { value: width / 2, step: 1 },
-          bottom: { value: -height / 2, step: 1 },
-          top: { value: height / 2, step: 1 },
-          far: { value: 1000, step: 1 },
-          near: { value: -1, step: 0.01 },
-          zoom: { value: 0.2, step: 0.01 },
-        }),
-      }),
+      [name]: folder(
+        {
+          orthographic: folder(
+            {
+              position: {
+                value: position as [number, number, number],
+                step: 1,
+              },
+              left: { value: -width / 2, step: 1 },
+              right: { value: width / 2, step: 1 },
+              bottom: { value: -height / 2, step: 1 },
+              top: { value: height / 2, step: 1 },
+              far: { value: 1000, step: 1 },
+              near: { value: -1, step: 0.01 },
+              zoom: { value: 0.2, step: 0.01 },
+            },
+            { collapsed: true }
+          ),
+        },
+        { collapsed: true }
+      ),
     });
 
     return <OrthographicCamera ref={ref} {...props} {...controls} />;
@@ -55,21 +64,27 @@ const ControlledPerspectiveCamera = React.forwardRef(
     const controls = useControls(
       "camera",
       {
-        [name]: folder({
-          perspective: folder({
-            position: {
-              value: position as [number, number, number],
-              step: 1,
-            },
-            fov: {
-              value: fov,
-              step: 1,
-            },
-            far: { value: far },
-            near: { value: near },
-            zoom: { value: zoom, step: 0.1 },
-          }),
-        }),
+        [name]: folder(
+          {
+            perspective: folder(
+              {
+                position: {
+                  value: position as [number, number, number],
+                  step: 1,
+                },
+                fov: {
+                  value: fov,
+                  step: 1,
+                },
+                far: { value: far },
+                near: { value: near },
+                zoom: { value: zoom, step: 0.1 },
+              },
+              { collapsed: true }
+            ),
+          },
+          { collapsed: true }
+        ),
       },
       {
         collapsed: true,
@@ -121,7 +136,7 @@ const useCameras = createStore(
 );
 
 import shallow from "zustand/shallow";
-
+import mergeRefs from "react-merge-refs";
 export function CameraSystem({ children }: React.PropsWithChildren<{}>) {
   const [cameras, setActiveCamera, activeCamera] = useCameras(
     (s) => [s.cameras, s.setActiveCamera, s.activeCamera],
@@ -147,14 +162,17 @@ export function CameraSystem({ children }: React.PropsWithChildren<{}>) {
   return <>{children}</>;
 }
 
-export function Camera({
-  name,
-  camera,
-  ...props
-}: { name: string; active?: boolean } & (
-  | PerspectiveCameraProps
-  | OrthographicCameraProps
-)) {
+export const Camera = React.forwardRef(function Camera(
+  {
+    name,
+    camera,
+    ...props
+  }: { name: string; active?: boolean } & (
+    | PerspectiveCameraProps
+    | OrthographicCameraProps
+  ),
+  forwardedRef: React.ForwardedRef<THREE.Camera>
+) {
   const [mountCamera, unmountCamera, setActiveCamera, activeCamera] =
     useCameras(
       (s) => [
@@ -215,7 +233,7 @@ export function Camera({
 
   return (
     <CameraType
-      ref={ref}
+      ref={mergeRefs([ref, forwardedRef])}
       name={name}
       {...props}
       makeDefault={
@@ -224,4 +242,4 @@ export function Camera({
       }
     />
   );
-}
+});

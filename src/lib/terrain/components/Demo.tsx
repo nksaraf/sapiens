@@ -9,9 +9,10 @@ import { createStore } from "../../store";
 import { TransformControls } from "@react-three/drei";
 import { Camera, CameraSystem } from "./Camera";
 import { Leva } from "leva";
+import { Vector3 } from "three";
 
 export const useViewer = createStore({
-  position: new THREE.Vector3(0, 260, 0),
+  position: new THREE.Vector3(0, 252, 0),
 });
 
 function PlayerCamera() {
@@ -19,41 +20,54 @@ function PlayerCamera() {
   const { speed } = useControls("player", {
     speed: { value: 5, min: 1, max: 100 },
   });
-  const camera = useThree((c) => c.camera);
+  const cameraRef = React.useRef<THREE.Camera>();
+
   useFrame(() => {
-    if (!ref.current) {
-      return;
-    }
-
     const { position } = useViewer.getState();
-    const { controls } = useKeyboardInput.getState();
-    if (controls.forward) {
-      ref.current.position.z += speed;
-    }
-    if (controls.backward) {
-      ref.current.position.z -= speed;
-    }
-    if (controls.left) {
-      ref.current.position.x -= speed;
-    }
-    if (controls.right) {
-      ref.current.position.x += speed;
+
+    if (ref.current) {
+      const { controls } = useKeyboardInput.getState();
+      if (controls.forward) {
+        ref.current.position.z += speed;
+      }
+      if (controls.backward) {
+        ref.current.position.z -= speed;
+      }
+      if (controls.left) {
+        ref.current.position.x -= speed;
+      }
+      if (controls.right) {
+        ref.current.position.x += speed;
+      }
+
+      position.copy(ref.current.position);
     }
 
-    position.copy(ref.current.position);
+    cameraRef.current?.position.copy(position);
+    cameraRef.current?.lookAt(position);
   });
 
   return (
     <>
-      <TransformControls>
-        <Sphere
-          ref={ref}
-          args={[10, 10, 10]}
-          position={useViewer.getState().position}
-        >
-          <meshStandardMaterial color="red" />
-        </Sphere>
-      </TransformControls>
+      <Sphere
+        ref={ref}
+        args={[10, 10, 10]}
+        position={useViewer.getState().position}
+      >
+        <meshStandardMaterial color="red" />
+      </Sphere>
+      <Camera
+        name="player"
+        camera="perspective"
+        ref={cameraRef as React.Ref<THREE.Camera>}
+        position={[0, 500, -500]}
+        onUpdate={(camera: THREE.PerspectiveCamera) => {
+          camera.lookAt(useViewer.getState().position);
+        }}
+        far={100000}
+        near={0.1}
+        makeDefault
+      />
     </>
   );
 }
@@ -61,7 +75,6 @@ function PlayerCamera() {
 export default function TerrainDemo() {
   return (
     <>
-      <PlayerCamera />
       {/* <QuadTreeTerrain
         {...useControls("terrain", {
           width: 1000,
@@ -73,10 +86,10 @@ export default function TerrainDemo() {
       /> */}
       {/* <gridHelper args={[300, 30]} /> */}
       <CameraSystem>
+        <PlayerCamera />
         <Camera
           name="far back view"
           camera="perspective"
-          makeDefault
           position={[0, 600, -600]}
           far={100000}
           near={0.1}
@@ -88,7 +101,8 @@ export default function TerrainDemo() {
           far={100000}
           near={0.1}
         />
-        <OrbitControls makeDefault />
+
+        {/* <OrbitControls makeDefault /> */}
         <Sky
           distance={4500}
           sunPosition={[0, 20, -200]}
