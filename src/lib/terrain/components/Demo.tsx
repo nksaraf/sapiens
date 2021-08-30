@@ -1,10 +1,7 @@
-import { useNoiseGenerator } from "@/noise";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useControls } from "../useControls";
+import { useControls } from "../../useControls";
 import React from "react";
 import * as THREE from "three";
-import { HyposymetricTintsGenerator } from "./lib/color-generator";
-import { NoisyHeightGenerator } from "./lib/height-generator";
 import {
   PerspectiveCamera,
   Sky,
@@ -12,13 +9,13 @@ import {
   OrbitControls,
 } from "@react-three/drei";
 import { useKeyboardInput } from "src/Keyboard";
-import { Planet } from "./components/Planet";
-import { createStore } from "../store";
+import { Planet } from "./Planet";
+import { createStore } from "../../store";
 import { TransformControls } from "@react-three/drei";
-import { QuadTreeTerrain } from "./components/InfiniteTerrain";
+import { QuadTreeTerrain } from "./InfiniteTerrain";
 
 export const useViewer = createStore({
-  position: new THREE.Vector3(0, 50, 0),
+  position: new THREE.Vector3(0, 110, 0),
 });
 
 function PlayerCamera() {
@@ -53,7 +50,7 @@ function PlayerCamera() {
   return (
     <>
       <TransformControls>
-        <Sphere ref={ref} args={[10, 10, 10]} position={[0, 50, 0]}>
+        <Sphere ref={ref} args={[10, 10, 10]} position={[0, 110, 0]}>
           <meshStandardMaterial color="red" />
         </Sphere>
       </TransformControls>
@@ -74,7 +71,7 @@ export default function TerrainDemo() {
           resolution: 64,
         })}
       /> */}
-      <gridHelper args={[300, 30]} />
+      {/* <gridHelper args={[300, 30]} /> */}
       <PerspectiveCamera
         makeDefault
         position={[0, 300, -300]}
@@ -92,7 +89,7 @@ export default function TerrainDemo() {
         {...useControls("planet", {
           resolution: 64,
           radius: { value: 100, min: 1, max: 500 },
-          position: { value: [0, -100, 0], step: 1 },
+          position: { value: [0, 0, 0], step: 1 },
         })}
       />
       <axesHelper scale={[100, 100, 100]} />

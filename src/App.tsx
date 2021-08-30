@@ -10,7 +10,7 @@ import { useAtomValue } from "jotai/utils";
 import { Camera } from "./components/Camera";
 import { Light } from "./Light";
 import { Keyboard, useKeyboardInput } from "./Keyboard";
-import TerrainDemo from "@/terrain/Demo";
+import TerrainDemo from "@/terrain/components/Demo";
 import React from "react";
 
 // function UI() {

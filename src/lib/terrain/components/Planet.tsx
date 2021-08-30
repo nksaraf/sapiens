@@ -9,7 +9,6 @@ import { COLORS, HyposymetricTintsGenerator } from "../lib/color-generator";
 import { spline } from "@/leva-spline/Spline";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { TerrainMaterial } from "./TerrainMaterial";
 import {
   DIRECTIONS,
   PlanetMesh as PlanetMeshImpl,
@@ -17,6 +16,9 @@ import {
 } from "../lib/PlanetMesh";
 import { QuadTreeNode } from "../lib/QuadTreeNode";
 import { folder } from "leva";
+import { PlanetMaterial } from "./PlanetMaterial";
+import { useViewer } from "./Demo";
+import { utils } from "../utils";
 
 let constantHeightGen = new FixedHeightGenerator({ height: 0 });
 
@@ -61,7 +63,7 @@ export function PlanetMesh(
       // position={props.offset}
       {...props}
     >
-      <TerrainMaterial />
+      <PlanetMaterial />
       {props.children}
     </primitive>
   );
@@ -123,18 +125,29 @@ export const useColorGenerator = (params: NoiseParams = biomeNoiseParams) => {
   return colorGenerator;
 };
 
+type PlanetChunkParams = {
+  position: THREE.Vector3;
+  chunkRadius: number;
+  key: string;
+};
+
 function PlanetFace({
   radius = 100,
   direction = "UP",
   ...props
 }: PlanetSphereProps & { direction: keyof typeof DIRECTIONS }) {
   let localUp = props.localUp ?? DIRECTIONS[direction];
+
+  const [chunks, setChunks] = React.useState<Record<string, PlanetChunkParams>>(
+    {}
+  );
+
   const tree = React.useMemo(() => {
     let chunk = new QuadTreeNode(
       {
-        position: new THREE.Vector3(0, -100, 0),
+        position: new THREE.Vector3(0, 0, 0),
         size: 100,
-        detailLevelDistances: [320, 40, 10],
+        detailLevelDistances: [320, 100, 40, 10],
       },
       [],
       undefined,
@@ -144,26 +157,53 @@ function PlanetFace({
       64,
       localUp as THREE.Vector3
     );
-
-    chunk.updateChunk();
-    let visibleChildren = chunk.getVisibleChildren();
-    console.log(visibleChildren);
-    return visibleChildren;
+    let { position } = useViewer.getState();
+    chunk.updateChunk(position);
+    return chunk;
   }, [localUp, radius]);
 
-  useFrame(() => {});
+  useFrame(() => {
+    const { position } = useViewer.getState();
+
+    tree.updateChunk(position);
+    const children = tree.getVisibleChildren();
+    let newChunks: Record<string, PlanetChunkParams> = {};
+    for (let child of children) {
+      let key = `${child.position.x}.${child.position.y}.${child.position.z}/${child.radius}`;
+      newChunks[key] = {
+        position: child.position,
+        chunkRadius: child.radius,
+        key: key,
+      };
+    }
+
+    let difference = utils.DictDifference(newChunks, chunks);
+    let toDelete = utils.DictDifference(chunks, newChunks);
+    if (
+      Object.keys(difference).length === 0 &&
+      Object.keys(toDelete).length === 0
+    ) {
+      return;
+    }
+
+    setChunks(newChunks);
+  });
 
   return (
     <>
-      {tree.map((child) => (
-        <PlanetMesh
-          {...props}
-          localUp={localUp}
-          offset={child.position}
-          chunkRadius={child.radius}
-          planetRadius={radius}
-        />
-      ))}
+      {Object.keys(chunks).map((key) => {
+        const chunk = chunks[key as keyof typeof chunks];
+        return (
+          <PlanetMesh
+            {...props}
+            localUp={localUp}
+            key={key}
+            offset={chunk.position}
+            chunkRadius={chunk.chunkRadius}
+            planetRadius={radius}
+          />
+        );
+      })}
     </>
   );
 }

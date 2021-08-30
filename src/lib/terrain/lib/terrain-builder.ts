@@ -6,6 +6,7 @@ export interface MeshGeneratorSettings {
   applyHeight: boolean;
   applyColor: boolean;
   debugColor: [number, number, number]
+  debugChunkRadius?: boolean;
 }
 
 export interface TerrainMeshParams {
@@ -102,7 +103,8 @@ export function buildPlanetMeshData({ origin, chunkRadius, planetRadius, localUp
         .add(axisA.clone().multiplyScalar((xp - 0.5))
           .add(axisB.clone().multiplyScalar((zp - 0.5)))
           .multiplyScalar(2)
-          .multiplyScalar(chunkRadius)).normalize().multiplyScalar(planetRadius);
+          .multiplyScalar(chunkRadius))
+        .normalize().multiplyScalar(planetRadius);
 
 
       const y = heightGenerator.get(pointOnPlanet.x, pointOnPlanet.y, pointOnPlanet.z);
@@ -114,6 +116,8 @@ export function buildPlanetMeshData({ origin, chunkRadius, planetRadius, localUp
 
       if (settings.applyColor) {
         colors.push(color.r, color.g, color.b);
+      } else if (settings.debugChunkRadius) {
+        colors.push(chunkRadius / 100, chunkRadius / 100, chunkRadius / 100);
       } else {
         colors.push(...settings.debugColor);
 

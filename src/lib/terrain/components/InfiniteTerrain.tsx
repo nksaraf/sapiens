@@ -1,14 +1,17 @@
 import { useFrame } from "@react-three/fiber";
-import { useControls } from "leva";
 import React from "react";
 import * as THREE from "three";
-import { TerrainMesh as ThreeTerrainMesh } from "../lib/TerrainMesh";
-import { useViewer } from "../Demo";
-import { TerrainMesh, TerrainMeshProps } from "./components";
+import {
+  TerrainMesh as TerrainMeshImpl,
+  TerrainMeshProps,
+} from "../lib/TerrainMesh";
+import { useViewer } from "./Demo";
+
 import { TerrainMaterial } from "./TerrainMaterial";
 import { QuadTree2 } from "@/quadtree";
 import { utils } from "../utils";
 import { useColorGenerator, useHeightGenerator } from "./Planet";
+import { TerrainMesh } from "./TerrainMesh";
 
 function getCellIndex(p: THREE.Vector3, chunkSize: number) {
   const xp = p.x + chunkSize * 0.5;
@@ -96,8 +99,8 @@ export function InfiniteTerrain({
 
 class TerrainChunkPool {}
 
-let pool: Record<number, ThreeTerrainMesh[]> = {};
-let active: Record<string, ThreeTerrainMesh> = {};
+let pool: Record<number, TerrainMeshImpl[]> = {};
+let active: Record<string, TerrainMeshImpl> = {};
 
 // function retireChunks(chunks: Record<string, TerrainChunkParams>) {
 //   for (let c of chunks) {
@@ -130,7 +133,7 @@ function TerrainBuilder({ children }: React.PropsWithChildren<{}>) {
             if (pool[w].length > 0) {
               mesh = pool[w].pop();
             } else {
-              mesh = new ThreeTerrainMesh();
+              mesh = new TerrainMeshImpl();
             }
           }
 

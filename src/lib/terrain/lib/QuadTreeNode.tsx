@@ -35,14 +35,14 @@ export class QuadTreeNode {
     this.axisB = localUp.clone().cross(this.axisA);
   }
 
-  distanceToPlayer() {
-    let distanceToPlayer = 500;
+  distanceToPlayer(playerPosition: THREE.Vector3) {
+    let distanceToPlayer = this.position.distanceTo(playerPosition);
     return distanceToPlayer;
   }
 
-  generateChildren() {
+  generateChildren(playerPosition: THREE.Vector3) {
     // If the detail level is under max level and above 0. Max level depends on how many detail levels are defined in planets and needs to be changed manually.
-    let distanceToPlayer = this.distanceToPlayer();
+    let distanceToPlayer = this.distanceToPlayer(playerPosition);
 
     if (
       this.detailLevel < this.planetConfig.detailLevelDistances.length &&
@@ -111,7 +111,7 @@ export class QuadTreeNode {
         ];
 
         this.children.forEach((child) => {
-          child.generateChildren();
+          child.generateChildren(playerPosition);
         });
       }
     }
@@ -131,8 +131,8 @@ export class QuadTreeNode {
     return visibleChildren;
   }
 
-  updateChunk() {
-    let distanceToPlayer = this.distanceToPlayer();
+  updateChunk(playerPosition: THREE.Vector3) {
+    let distanceToPlayer = this.distanceToPlayer(playerPosition);
 
     if (this.detailLevel <= this.planetConfig.detailLevelDistances.length) {
       if (
@@ -143,10 +143,10 @@ export class QuadTreeNode {
       } else {
         if (this.children.length > 0) {
           this.children.forEach((child) => {
-            child.updateChunk();
+            child.updateChunk(playerPosition);
           });
         } else {
-          this.generateChildren();
+          this.generateChildren(playerPosition);
         }
       }
     }
