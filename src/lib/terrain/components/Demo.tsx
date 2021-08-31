@@ -8,6 +8,7 @@ import {
   OrbitControls,
   FlyControls,
   PerspectiveCamera,
+  Stars,
 } from "@react-three/drei";
 import { useKeyboardInput } from "src/Keyboard";
 import { Planet } from "./Planet";
@@ -16,19 +17,35 @@ import { TransformControls } from "@react-three/drei";
 import { Camera, CameraSystem } from "./Camera";
 import { Leva } from "leva";
 import { Vector3 } from "three";
+import { PointerLockControls as PointerLockControlsImpl } from "three-stdlib";
 import { PointerLockControls } from "./PointerLockControls";
 
 export const useViewer = createStore({
   position: new THREE.Vector3(0, 1050, 0),
 });
 
-const velocity = new THREE.Vector3();
-const decceleration = new THREE.Vector3();
-const acceleration = new THREE.Vector3();
+const velocity = new THREE.Vector3(0, 0, 0);
+const decceleration = new THREE.Vector3(-10, -10, -10);
+const acceleration = new THREE.Vector3(10, 10, 10);
 
 function ShipControls() {
+  const camera = useThree(({ camera }) => camera);
+
+  // const con = React.useMemo(
+  //   () => new PointerLockControlsImpl(camera, gl.domElement),
+  //   [camera, gl.domElement]
+  // );
+
+  const { rotation, position } = React.useMemo(
+    () => ({
+      rotation: new THREE.Quaternion().copy(camera.quaternion),
+      position: new THREE.Vector3().copy(camera.position),
+    }),
+    [camera]
+  );
+
   useFrame((s) => {
-    let timeInSeconds = s.clock.getDelta();
+    let timeInSeconds = Math.min(s.clock.getElapsedTime(), 0.1);
     const frameDecceleration = new THREE.Vector3(
       velocity.x * decceleration.x,
       velocity.y * decceleration.y,
@@ -37,11 +54,9 @@ function ShipControls() {
     frameDecceleration.multiplyScalar(timeInSeconds);
     velocity.add(frameDecceleration);
 
-    const _Q = new THREE.Quaternion();
-    const _A = new THREE.Vector3();
-    const _R = controlObject.quaternion.clone();
-
-    const controlObject = this._params.camera;
+    // const _Q = new THREE.Quaternion();
+    // const _A = new THREE.Vector3();
+    // const _R = camera.quaternion.clone();
 
     const { controls } = useKeyboardInput.getState();
 
@@ -67,32 +82,52 @@ function ShipControls() {
     //   this._velocity.z -= this._acceleration.x * timeInSeconds;
     // }
 
-    controlObject.quaternion.copy(_R);
+    // controlObject.quaternion.copy(_R);
 
-    const oldPosition = new THREE.Vector3();
-    oldPosition.copy(controlObject.position);
+    // const oldPosition = new THREE.Vector3();
+    // oldPosition.copy(camera.position);
 
     const forward = new THREE.Vector3(0, 0, 1);
-    forward.applyQuaternion(controlObject.quaternion);
+    forward.applyQuaternion(camera.quaternion);
     //forward.y = 0;
     forward.normalize();
 
     const updown = new THREE.Vector3(0, 1, 0);
 
     const sideways = new THREE.Vector3(1, 0, 0);
-    sideways.applyQuaternion(controlObject.quaternion);
+    sideways.applyQuaternion(camera.quaternion);
     sideways.normalize();
 
     sideways.multiplyScalar(velocity.x * timeInSeconds);
     updown.multiplyScalar(velocity.y * timeInSeconds);
     forward.multiplyScalar(velocity.z * timeInSeconds);
 
-    controlObject.position.add(forward);
-    controlObject.position.add(sideways);
-    controlObject.position.add(updown);
+    camera.position.add(forward);
+    camera.position.add(sideways);
+    camera.position.add(updown);
 
-    oldPosition.copy(controlObject.position);
+    console.log(
+      velocity.toArray(),
+      camera.position.toArray(),
+      forward.toArray()
+    );
+
+    position.lerp(camera.position, 0.15);
+    rotation.slerp(camera.quaternion, 0.15);
+
+    useViewer.getState().position.copy(position);
+
+    // controlObject.position.copy(this._position);
+    camera.quaternion.copy(rotation);
+    camera.position.copy(position);
   });
+
+  return (
+    <>
+      <PointerLockControls />
+      {/* <OrbitControls makeDefault /> */}
+    </>
+  );
 }
 
 function PlayerCamera() {
@@ -175,13 +210,15 @@ export default function TerrainDemo() {
           near={0.1}
           makeDefault
         />
+        <ShipControls />
+        {/* <PointerLockControls /> */}
         {/* <OrbitControls makeDefault /> */}
-        <PointerLockControls />
-        <Sky
-          distance={4500}
-          sunPosition={[0, 20, -200]}
-          inclination={0}
-          azimuth={0.25}
+        <Stars
+          radius={2000}
+          // distance={4500}
+          // sunPosition={[0, 20, -200]}
+          // inclination={0}
+          // azimuth={0.25}
         />
         <Planet
           {...useControls("planet", {

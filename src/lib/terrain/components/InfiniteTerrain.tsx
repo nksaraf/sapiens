@@ -12,6 +12,7 @@ import { QuadTree2 } from "@/quadtree";
 import { utils } from "../utils";
 import { useColorGenerator, useHeightGenerator } from "./Planet";
 import { TerrainMesh } from "./TerrainMesh";
+import { ObjectPoolImpl, ObjectPool } from "./ObjectPool";
 
 function getCellIndex(p: THREE.Vector3, chunkSize: number) {
   const xp = p.x + chunkSize * 0.5;
@@ -97,59 +98,18 @@ export function InfiniteTerrain({
   );
 }
 
-class TerrainChunkPool {}
+const terrainMeshPool = new ObjectPoolImpl();
 
-let pool: Record<number, TerrainMeshImpl[]> = {};
-let active: Record<string, TerrainMeshImpl> = {};
-
-// function retireChunks(chunks: Record<string, TerrainChunkParams>) {
-//   for (let c of chunks) {
-//     if (!(c.width in pool)) {
-//       this._pool[c.chunk._params.width] = [];
-//     }
-
-//     c.chunk.Hide();
-//     this._pool[c.chunk._params.width].push(c.chunk);
-//   }
-// }
-
-function TerrainBuilder({ children }: React.PropsWithChildren<{}>) {
+function TerrainMeshPool({ children }: React.PropsWithChildren<{}>) {
   return (
-    <>
-      {React.Children.map(children, (child, index) => {
-        let chunkElement = child as React.ReactElement;
-        if (chunkElement.type === TerrainMesh) {
-          console.log(child);
-          let mesh;
-
-          if (active[chunkElement.key!]) {
-            mesh = active[chunkElement.key!];
-          } else {
-            let w = chunkElement.props.size;
-            if (!(w in pool)) {
-              pool[w] = [];
-            }
-
-            if (pool[w].length > 0) {
-              mesh = pool[w].pop();
-            } else {
-              mesh = new TerrainMeshImpl();
-            }
-          }
-
-          active[chunkElement.key!] = mesh!;
-
-          return (
-            <TerrainMesh
-              key={chunkElement.key}
-              object={mesh}
-              {...chunkElement.props}
-            />
-          );
-        }
-        return null;
-      })}
-    </>
+    <ObjectPool
+      pool={terrainMeshPool}
+      type={TerrainMesh}
+      impl={TerrainMeshImpl}
+      getParams={(props: any) => props.size}
+    >
+      {children}
+    </ObjectPool>
   );
 }
 
@@ -229,7 +189,7 @@ export function QuadTreeTerrain({
 
   return (
     <>
-      <TerrainBuilder>
+      <TerrainMeshPool>
         {Object.keys(chunks).map((k) => {
           let chunk = chunks[k];
           return (
@@ -249,7 +209,7 @@ export function QuadTreeTerrain({
             </TerrainMesh>
           );
         })}
-      </TerrainBuilder>
+      </TerrainMeshPool>
     </>
   );
 }

@@ -19,6 +19,7 @@ import { folder } from "leva";
 import { PlanetMaterial } from "./PlanetMaterial";
 import { useViewer } from "./Demo";
 import { utils } from "../utils";
+import { ObjectPool, ObjectPoolImpl } from "./ObjectPool";
 
 let constantHeightGen = new FixedHeightGenerator({ height: 0 });
 
@@ -106,11 +107,12 @@ export const useColorGenerator = (params: NoiseParams = biomeNoiseParams) => {
   const controls = useControls("biome", {
     spline: spline({
       value: [
-        ["#" + COLORS.DEEP_OCEAN.getHexString(), 0],
-        ["#" + COLORS.SHALLOW_OCEAN.getHexString(), 0.05],
-        ["#" + COLORS.FOREST_TROPICAL.getHexString(), 0.1],
-        ["#" + COLORS.FOREST_TEMPERATE.getHexString(), 0.3],
-        ["#" + COLORS.SNOW.getHexString(), 0.5],
+        [COLORS.DEEP_OCEAN, 0],
+        [COLORS.SHALLOW_OCEAN, 0.05],
+        [COLORS.FOREST_TROPICAL, 0.1],
+        ["#6f5231", 0.2],
+        ["#6f5231", 0.35],
+        [COLORS.SNOW, 0.4],
       ],
     }),
   });
@@ -124,6 +126,21 @@ export const useColorGenerator = (params: NoiseParams = biomeNoiseParams) => {
 
   return colorGenerator;
 };
+
+const planetMeshPool = new ObjectPoolImpl();
+
+function PlanetMeshPool({ children }: React.PropsWithChildren<{}>) {
+  return (
+    <ObjectPool
+      pool={planetMeshPool}
+      type={PlanetMesh}
+      impl={PlanetMeshImpl}
+      getParams={(props: any) => props.chunkRadius}
+    >
+      {children}
+    </ObjectPool>
+  );
+}
 
 type PlanetChunkParams = {
   position: THREE.Vector3;
@@ -191,7 +208,7 @@ function PlanetFace({
   });
 
   return (
-    <>
+    <PlanetMeshPool>
       {Object.keys(chunks).map((key) => {
         const chunk = chunks[key as keyof typeof chunks];
         return (
@@ -203,10 +220,11 @@ function PlanetFace({
             resolution={chunk.resolution}
             chunkRadius={chunk.chunkRadius}
             planetRadius={radius}
+            frustumCulled={false}
           />
         );
       })}
-    </>
+    </PlanetMeshPool>
   );
 }
 
@@ -253,10 +271,10 @@ export function Planet(props: PlanetSphereProps) {
   const heightGenerator = useHeightGenerator({
     octaves: 10,
     persistence: 0.5,
-    lacunarity: 1.36,
-    exponentiation: 5.5,
+    lacunarity: 1.56,
+    exponentiation: 5.4,
     height: 1,
-    scale: 200,
+    scale: 400,
     noiseType: "simplex",
     seed: 1,
   });

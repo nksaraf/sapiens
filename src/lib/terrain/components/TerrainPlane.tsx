@@ -1,7 +1,7 @@
 import { useControls } from "leva";
 import React from "react";
-import { TerrainMesh } from "./components";
 import { useColorGenerator, useHeightGenerator } from "./Planet";
+import { TerrainMesh } from "./TerrainMesh";
 
 export function TerrainPlane({
   width = 1000,

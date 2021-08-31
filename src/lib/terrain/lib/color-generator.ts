@@ -6,15 +6,13 @@ import * as THREE from "three";
 
 export const COLORS = {
   WHITE: new THREE.Color(0x808080),
-  // OCEAN: new THREE.Color(0xd9d592),
-  OCEAN: new THREE.Color("blue"),
   BEACH: new THREE.Color(0xd9d592),
-  SNOW: new THREE.Color(0xffffff),
-  FOREST_TROPICAL: new THREE.Color(0x4f9f0f),
+  SNOW: '#ffffff',
+  FOREST_TROPICAL: '#4f9f0f',
   FOREST_TEMPERATE: new THREE.Color(0x2b960e),
-  FOREST_BOREAL: new THREE.Color(0x29c100),
-  DEEP_OCEAN: new THREE.Color(0x20020FF),
-  SHALLOW_OCEAN: new THREE.Color(0x8080FF),
+  // FOREST_BOREAL: '#29c100',
+  DEEP_OCEAN: '#0020FF',
+  SHALLOW_OCEAN: '#8080FF',
 
 };
 
