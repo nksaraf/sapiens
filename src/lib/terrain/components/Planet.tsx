@@ -1,4 +1,9 @@
-import { NoiseParams, useNoiseGenerator } from "@/noise";
+import {
+  NoiseGenerator,
+  NoiseParams,
+  noiseParamsFolder,
+  useNoiseGenerator,
+} from "@/noise";
 import { useControls } from "../../useControls";
 import React from "react";
 import {
@@ -11,6 +16,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import {
   DIRECTIONS,
+  PlanetConfig,
   PlanetMesh as PlanetMeshImpl,
   PlanetMeshProps,
 } from "../lib/PlanetMesh";
@@ -20,8 +26,7 @@ import { PlanetMaterial } from "./PlanetMaterial";
 import { useViewer } from "./Demo";
 import { utils } from "../utils";
 import { ObjectPool, ObjectPoolImpl } from "./ObjectPool";
-
-let constantHeightGen = new FixedHeightGenerator({ height: 0 });
+import { GradientPoint } from "@/leva-spline/spline-types";
 
 export function PlanetMesh(
   props: PlanetMeshProps & { object?: PlanetMeshImpl }
@@ -61,7 +66,6 @@ export function PlanetMesh(
       ref={ref}
       receiveShadow
       castShadow={false}
-      // position={props.offset}
       {...props}
     >
       <PlanetMaterial />
@@ -70,30 +74,38 @@ export function PlanetMesh(
   );
 }
 
-const terrainNoiseParams = {
-  octaves: 10,
-  persistence: 0.5,
-  lacunarity: 1.6,
-  exponentiation: 7.5,
-  height: 1,
-  scale: 500,
-  noiseType: "simplex",
-  seed: 1,
-} as const;
+// const terrainNoiseParams = {
+//   octaves: 10,
+//   persistence: 0.5,
+//   lacunarity: 1.6,
+//   exponentiation: 7.5,
+//   height: 1,
+//   scale: 500,
+//   noiseType: "simplex",
+//   seed: 1,
+// } as const;
 
-const biomeNoiseParams = {
-  octaves: 2,
-  persistence: 0.5,
-  lacunarity: 2.0,
-  scale: 2048.0,
-  noiseType: "simplex",
-  seed: 2,
-  exponentiation: 1,
-  height: 1.0,
-} as const;
+// const biomeNoiseParams = {
+//   octaves: 2,
+//   persistence: 0.5,
+//   lacunarity: 2.0,
+//   scale: 2048.0,
+//   noiseType: "simplex",
+//   seed: 2,
+//   exponentiation: 1,
+//   height: 1.0,
+// } as const;
 
-export function useHeightGenerator(params: NoiseParams = terrainNoiseParams) {
-  const terrainNoiseGenerator = useNoiseGenerator("terrain", params);
+export function useHeightGenerator(name: string, params: NoiseParams) {
+  const terrainNoiseParams = useControls(name, {
+    terrain: folder({
+      noise: noiseParamsFolder(params),
+    }),
+  });
+
+  const terrainNoiseGenerator = React.useMemo(() => {
+    return new NoiseGenerator(terrainNoiseParams);
+  }, [terrainNoiseParams]);
 
   const heightGenerator = React.useMemo(() => {
     return new NoisyHeightGenerator(terrainNoiseGenerator);
@@ -102,27 +114,40 @@ export function useHeightGenerator(params: NoiseParams = terrainNoiseParams) {
   return heightGenerator;
 }
 
-export const useColorGenerator = (params: NoiseParams = biomeNoiseParams) => {
-  const biomeNoiseGenerator = useNoiseGenerator("biome", params);
-  const controls = useControls("biome", {
-    spline: spline({
-      value: [
-        [COLORS.DEEP_OCEAN, 0],
-        [COLORS.SHALLOW_OCEAN, 0.05],
-        [COLORS.FOREST_TROPICAL, 0.1],
-        ["#6f5231", 0.2],
-        ["#6f5231", 0.35],
-        [COLORS.SNOW, 0.4],
-      ],
+export const useColorGenerator = (
+  name: string,
+  {
+    gradient,
+    biomeNoise,
+  }: {
+    gradient: GradientPoint[];
+    biomeNoise: NoiseParams;
+  }
+) => {
+  const biomeNoiseParams = useControls(name, {
+    biome: folder({
+      noise: noiseParamsFolder(biomeNoise),
     }),
   });
+
+  const controls = useControls(name, {
+    biome: folder({
+      gradient: spline({
+        value: gradient,
+      }),
+    }),
+  });
+
+  const biomeNoiseGenerator = React.useMemo(() => {
+    return new NoiseGenerator(biomeNoiseParams);
+  }, [biomeNoiseParams]);
 
   const colorGenerator = React.useMemo(() => {
     return new HyposymetricTintsGenerator({
       biomeNoiseGenerator,
-      spline: controls.spline,
+      spline: controls.gradient,
     });
-  }, [biomeNoiseGenerator, controls.spline]);
+  }, [biomeNoiseGenerator, controls.gradient]);
 
   return colorGenerator;
 };
@@ -150,11 +175,15 @@ type PlanetChunkParams = {
 };
 
 function PlanetFace({
-  radius = 100,
   direction = "UP",
   resolution = 64,
+  offset,
+  planet,
   ...props
-}: PlanetSphereProps & { direction: keyof typeof DIRECTIONS }) {
+}: PlanetMeshProps & {
+  direction: keyof typeof DIRECTIONS;
+  planet: PlanetConfig;
+}) {
   let localUp = props.localUp ?? DIRECTIONS[direction];
 
   const [chunks, setChunks] = React.useState<Record<string, PlanetChunkParams>>(
@@ -163,21 +192,20 @@ function PlanetFace({
 
   const tree = React.useMemo(() => {
     let chunk = new QuadTreeNode(
-      {
-        position: new THREE.Vector3(0, 0, 0),
-        size: 100,
-        detailLevelDistances: [2500, 1000, 400, 150, 70, 30, 10],
-      },
+      planet,
       [],
       undefined,
-      radius,
+      planet.radius,
       0,
-      (localUp as THREE.Vector3).clone().normalize().multiplyScalar(radius),
+      (localUp as THREE.Vector3)
+        .clone()
+        .normalize()
+        .multiplyScalar(planet.radius),
       resolution,
       localUp as THREE.Vector3
     );
     return chunk;
-  }, [localUp, radius, resolution]);
+  }, [localUp, resolution, planet]);
 
   useFrame(() => {
     const { position } = useViewer.getState();
@@ -207,35 +235,33 @@ function PlanetFace({
     setChunks(newChunks);
   });
 
+  console.log(planet.position);
+
   return (
-    <PlanetMeshPool>
+    <>
       {Object.keys(chunks).map((key) => {
         const chunk = chunks[key as keyof typeof chunks];
         return (
           <PlanetMesh
             {...props}
+            position={planet.position}
             localUp={localUp}
             key={key}
             offset={chunk.position}
             resolution={chunk.resolution}
             chunkRadius={chunk.chunkRadius}
-            planetRadius={radius}
+            planet={planet}
             frustumCulled={false}
           />
         );
       })}
-    </PlanetMeshPool>
+    </>
   );
 }
 
-type PlanetSphereProps = Omit<
-  PlanetMeshProps,
-  "chunkRadius" | "planetRadius"
-> & {
-  radius: number;
-};
-
-export function PlanetSphere(props: PlanetSphereProps) {
+export function PlanetSphere(
+  props: PlanetMeshProps & { planet: PlanetConfig }
+) {
   return (
     <>
       {Object.keys(DIRECTIONS).map((key) => (
@@ -250,25 +276,29 @@ export function PlanetSphere(props: PlanetSphereProps) {
   );
 }
 
-export interface PlanetConfig {
-  size: number;
-  position: THREE.Vector3;
-  detailLevelDistances: number[];
-}
-
-export function Planet(props: PlanetSphereProps) {
-  const colorGenerator = useColorGenerator({
-    octaves: 2,
-    persistence: 0.5,
-    lacunarity: 2.0,
-    scale: 2048.0,
-    noiseType: "simplex",
-    seed: 2,
-    exponentiation: 1,
-    height: 1.0,
+function usePlanetGenerators(name: string) {
+  const colorGenerator = useColorGenerator(name, {
+    biomeNoise: {
+      octaves: 2,
+      persistence: 0.5,
+      lacunarity: 2.0,
+      scale: 2048.0,
+      noiseType: "simplex",
+      seed: 2,
+      exponentiation: 1,
+      height: 1.0,
+    },
+    gradient: [
+      [COLORS.DEEP_OCEAN, 0],
+      [COLORS.SHALLOW_OCEAN, 0.05],
+      [COLORS.FOREST_TROPICAL, 0.1],
+      ["#6f5231", 0.2],
+      ["#6f5231", 0.35],
+      [COLORS.SNOW, 0.4],
+    ],
   });
 
-  const heightGenerator = useHeightGenerator({
+  const heightGenerator = useHeightGenerator(name, {
     octaves: 10,
     persistence: 0.5,
     lacunarity: 1.56,
@@ -279,7 +309,7 @@ export function Planet(props: PlanetSphereProps) {
     seed: 1,
   });
 
-  const { worker, ...settings } = useControls("planet", {
+  const { worker, ...settings } = useControls(name, {
     settings: folder({
       applyHeight: true,
       applyColor: true,
@@ -288,6 +318,35 @@ export function Planet(props: PlanetSphereProps) {
     worker: true,
   });
 
+  return { colorGenerator, heightGenerator, worker, settings };
+}
+
+export function Planet(
+  props: PlanetMeshProps & { name: string; radius: number }
+) {
+  const { colorGenerator, heightGenerator, worker, settings } =
+    usePlanetGenerators(props.name);
+
+  const controls = useControls(props.name, {
+    resolution: 16,
+    radius: { value: props.radius ?? 100, min: 1, max: 1000 },
+    position: {
+      value: (props.position as [number, number, number]) ?? [0, 0, 0],
+      step: 1,
+    },
+  });
+
+  const planetConfig = React.useMemo(
+    () => ({
+      radius: controls.radius,
+      position: controls.position,
+      detailLevelDistances: props.planet?.detailLevelDistances ?? [
+        2500, 1000, 400, 150, 70, 30, 10,
+      ],
+    }),
+    [controls.radius, controls.position, props.planet?.detailLevelDistances]
+  );
+
   return (
     <PlanetSphere
       heightGenerator={heightGenerator}
@@ -295,6 +354,8 @@ export function Planet(props: PlanetSphereProps) {
       worker={worker}
       settings={settings}
       {...props}
+      {...controls}
+      planet={planetConfig}
     />
   );
 }

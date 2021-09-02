@@ -12,25 +12,30 @@ export const DIRECTIONS = {
   BACK: new THREE.Vector3(0, 0, -1),
 };
 
+export interface PlanetConfig {
+  position: [number, number, number];
+  radius: number;
+  detailLevelDistances: number[];
+}
 
 export interface PlanetMeshParams extends TerrainMeshParams {
-  origin: Vector3;
+  origin: THREE.Vector3;
   chunkRadius: number;
-  planetRadius: number;
-  localUp: Vector3;
+  planet: PlanetConfig;
+  localUp: THREE.Vector3;
 }
 
 export class PlanetMesh extends TerrainMesh {
-  origin: Vector3;
+  origin: THREE.Vector3;
   chunkRadius: number;
-  planetRadius: number;
-  localUp: Vector3;
+  planet: PlanetConfig;
+  localUp: THREE.Vector3;
   constructor(params: Partial<PlanetMeshParams> = {}) {
     super(params);
     this.origin = params.origin ?? new THREE.Vector3(0, 0, 0);
     this.chunkRadius = params.chunkRadius ?? 100;
     this.localUp = params.localUp ?? DIRECTIONS.UP.clone();
-    this.planetRadius = params.planetRadius ?? 100;
+    this.planet = params.planet ?? { position: [0, 0, 0], radius: 100, detailLevelDistances: [1600, 400, 100] };
   }
 
   update() {
@@ -40,14 +45,14 @@ export class PlanetMesh extends TerrainMesh {
           width: this.width,
           height: this.height,
           resolution: this.resolution,
-          offset: (this.offset as THREE.Vector3).toArray(),
+          offset: this.offset.toArray(),
           heightGenerator: this.heightGenerator.params as any,
           colorGenerator: this.colorGenerator.params as any,
           settings: this.settings,
-          origin: (this.origin as THREE.Vector3).toArray(),
+          origin: this.origin.toArray(),
           chunkRadius: this.chunkRadius,
-          planetRadius: this.planetRadius,
-          localUp: (this.localUp as THREE.Vector3).toArray(),
+          planet: this.planet,
+          localUp: this.localUp.toArray(),
         }, (data) => {
           this.updateFromData(data);
         });
@@ -63,7 +68,7 @@ export class PlanetMesh extends TerrainMesh {
         settings: this.settings,
         origin: this.origin as THREE.Vector3,
         chunkRadius: this.chunkRadius,
-        planetRadius: this.planetRadius,
+        planet: this.planet,
         localUp: this.localUp as THREE.Vector3,
       });
       this.updateFromData(data);

@@ -1,0 +1,36 @@
+diff --git a/node_modules/bitecs/dist/index.d.ts b/node_modules/bitecs/dist/index.d.ts
+index 2411e09..50bcb24 100644
+--- a/node_modules/bitecs/dist/index.d.ts
++++ b/node_modules/bitecs/dist/index.d.ts
+@@ -56,14 +56,14 @@ declare module 'bitecs' {
+ 
+   export type ComponentType<T extends ISchema> = {
+     [key in keyof T]: T[key] extends Type
+-      ? ArrayByType[T[key]]
+-      : T[key] extends [infer RT, number]
+-      ? RT extends Type
+-        ? Array<ArrayByType[RT]>
+-        : unknown
+-      : T[key] extends ISchema
+-      ? ComponentType<T[key]>
+-      : unknown;
++    ? ArrayByType[T[key]]
++    : T[key] extends [infer RT, number]
++    ? RT extends Type
++    ? Array<ArrayByType[RT]>
++    : unknown
++    : T[key] extends ISchema
++    ? ComponentType<T[key]>
++    : unknown;
+   };
+ 
+   export interface IWorld {
+@@ -117,7 +117,7 @@ declare module 'bitecs' {
+   export function removeQuery(world: IWorld, query: Query): Query
+   export function commitRemovals(world: IWorld): void
+ 
+-  export function defineSystem(update: (world: IWorld, ...args: any[]) => IWorld): System
++  export function defineSystem(update: (world: IWorld, ...args: any[]) => void): System
+ 
+   export function defineSerializer(target: IWorld | Component[] | IComponentProp[] | QueryModifier, maxBytes?: number): Serializer
+   export function defineDeserializer(target: IWorld | Component[] | IComponentProp[] | QueryModifier): Deserializer

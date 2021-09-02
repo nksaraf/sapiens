@@ -12,6 +12,7 @@ import { Light } from "./Light";
 import { Keyboard, useKeyboardInput } from "./Keyboard";
 import TerrainDemo from "@/terrain/components/Demo";
 import React from "react";
+import { World } from "@/ecs/components/World";
 
 // function UI() {
 //   const inCheckmate = useAtomValue($.inCheckmate);
@@ -41,6 +42,7 @@ export function App() {
         <Toaster />
         <Leva collapsed={true} />
         <Canvas shadows>
+          <World />
           <color attach="background" args={["black"]} />
           <TerrainDemo />
           <Keyboard />

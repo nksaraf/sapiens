@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { PlanetConfig } from "../components/Planet";
+import { PlanetConfig } from "./PlanetMesh";
 
 export class QuadTreeNode {
   resolution: number;
@@ -36,7 +36,12 @@ export class QuadTreeNode {
   }
 
   distanceToPlayer(playerPosition: THREE.Vector3) {
-    let distanceToPlayer = this.position.distanceTo(playerPosition);
+    let distanceToPlayer = this.position
+      .clone()
+      .normalize()
+      .multiplyScalar(this.planetConfig.radius)
+      .add(new THREE.Vector3().fromArray(this.planetConfig.position))
+      .distanceTo(playerPosition);
     return distanceToPlayer;
   }
 

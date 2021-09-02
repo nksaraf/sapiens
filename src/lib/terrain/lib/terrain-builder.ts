@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { HeightGenerator } from "./height-generator";
 import { ColorGenerator } from "./color-generator";
+import { PlanetConfig } from "./PlanetMesh";
 
 export interface MeshGeneratorSettings {
   applyHeight: boolean;
@@ -78,11 +79,11 @@ export function buildTerrainMeshData({ resolution, offset, width, height, height
   return { indices, positions, uvs, normals, colors };
 }
 
-export function buildPlanetMeshData({ origin, chunkRadius, planetRadius, localUp, resolution, offset, width, height, heightGenerator, colorGenerator, settings }: TerrainMeshParams & {
+export function buildPlanetMeshData({ origin, planet, chunkRadius, localUp, resolution, offset, width, height, heightGenerator, colorGenerator, settings }: TerrainMeshParams & {
   origin: THREE.Vector3;
   localUp: THREE.Vector3;
   chunkRadius: number;
-  planetRadius: number;
+  planet: PlanetConfig;
 }) {
   const positions = [];
   const uvs = [];
@@ -104,7 +105,7 @@ export function buildPlanetMeshData({ origin, chunkRadius, planetRadius, localUp
           .add(axisB.clone().multiplyScalar((zp - 0.5)))
           .multiplyScalar(2)
           .multiplyScalar(chunkRadius))
-        .normalize().multiplyScalar(planetRadius);
+        .normalize().multiplyScalar(planet.radius);
 
 
       const y = heightGenerator.get(pointOnPlanet.x, pointOnPlanet.y, pointOnPlanet.z);

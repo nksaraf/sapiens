@@ -170,35 +170,39 @@ export interface NoiseParams {
 
 export type NoiseType = "simplex" | "perlin";
 
+export function noiseParamsFolder({
+  octaves = 6,
+  persistence = 0.707,
+  lacunarity = 1.8,
+  exponentiation = 4.5,
+  height = 300,
+  scale = 800,
+  seed = 1,
+  noiseType = "simplex",
+}: Partial<NoiseParams> = {}) {
+  return folder({
+    octaves: { value: octaves, step: 1, min: 1, max: 20 },
+    persistence: { value: persistence, min: 0.25, max: 1.0 },
+    lacunarity: { min: 0.01, max: 4.0, value: lacunarity },
+    exponentiation: { min: 0.1, max: 10.0, value: exponentiation },
+    height: { min: 0, value: height },
+    scale: { min: 32, max: 4096, value: scale, step: 1 },
+    noiseType: {
+      options: ["simplex", "perlin"] as NoiseType[],
+      value: noiseType,
+    },
+    seed: { value: seed },
+  });
+}
+
 export function useNoiseGenerator(
   name: string,
-  {
-    octaves = 6,
-    persistence = 0.707,
-    lacunarity = 1.8,
-    exponentiation = 4.5,
-    height = 300,
-    scale = 800,
-    seed = 1,
-    noiseType = "simplex",
-  }: Partial<NoiseParams> = {}
+  params: Partial<NoiseParams> = {}
 ) {
   const controls = useControls(
     name,
     {
-      noise: folder({
-        octaves: { value: octaves, step: 1, min: 1, max: 20 },
-        persistence: { value: persistence, min: 0.25, max: 1.0 },
-        lacunarity: { min: 0.01, max: 4.0, value: lacunarity },
-        exponentiation: { min: 0.1, max: 10.0, value: exponentiation },
-        height: { min: 0, value: height },
-        scale: { min: 32, max: 4096, value: scale, step: 1 },
-        noiseType: {
-          options: ["simplex", "perlin"] as NoiseType[],
-          value: noiseType,
-        },
-        seed: { value: seed },
-      }),
+      noise: noiseParamsFolder(params),
     },
     { collapsed: true }
   );

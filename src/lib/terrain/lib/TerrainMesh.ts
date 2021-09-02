@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ColorGenerator, HyposymetricTintsGenerator } from "./color-generator";
 import { HeightGenerator, NoisyHeightGenerator } from "./height-generator";
-import { Object3DNode, Vector3 } from "@react-three/fiber";
+import { Object3DNode, Overwrite, Vector3 } from "@react-three/fiber";
 import { buildTerrainMeshData, MeshData, MeshGeneratorSettings, TerrainMeshParams } from "./terrain-builder";
 import TerrainBuilderWorker from './terrain-builder.worker?worker'
 import type { Builder } from "./terrain-builder.worker";
@@ -17,7 +17,7 @@ export class TerrainMesh extends THREE.Mesh {
   resolution: number;
   heightGenerator: HeightGenerator;
   colorGenerator: ColorGenerator;
-  offset: Vector3
+  offset: THREE.Vector3
   worker: boolean = false
   settings: MeshGeneratorSettings = {
     applyHeight: true,
@@ -81,12 +81,11 @@ export class TerrainMesh extends THREE.Mesh {
 
   update() {
     if (this.worker) {
-      let offset = (this.offset as THREE.Vector3).toArray();
       workerPool.enqueue("buildTerrainMeshData", {
         width: this.width,
         height: this.height,
         resolution: this.resolution,
-        offset: offset,
+        offset: this.offset.toArray(),
         heightGenerator: this.heightGenerator.params as any,
         colorGenerator: this.colorGenerator.params as any,
         settings: this.settings,
@@ -99,7 +98,7 @@ export class TerrainMesh extends THREE.Mesh {
         width: this.width,
         height: this.height,
         resolution: this.resolution,
-        offset: this.offset as THREE.Vector3,
+        offset: this.offset,
         heightGenerator: this.heightGenerator,
         colorGenerator: this.colorGenerator,
         settings: this.settings
@@ -108,10 +107,10 @@ export class TerrainMesh extends THREE.Mesh {
   }
 }
 
-export type TerrainMeshProps = Object3DNode<
+export type TerrainMeshProps = Overwrite<Object3DNode<
   TerrainMesh,
   typeof TerrainMesh
->;
+>, { offset?: Vector3 }>;
 
 
 

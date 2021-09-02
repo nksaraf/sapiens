@@ -106,12 +106,6 @@ function ShipControls() {
     camera.position.add(sideways);
     camera.position.add(updown);
 
-    console.log(
-      velocity.toArray(),
-      camera.position.toArray(),
-      forward.toArray()
-    );
-
     position.lerp(camera.position, 0.15);
     rotation.slerp(camera.quaternion, 0.15);
 
@@ -220,13 +214,8 @@ export default function TerrainDemo() {
           // inclination={0}
           // azimuth={0.25}
         />
-        <Planet
-          {...useControls("planet", {
-            resolution: 64,
-            radius: { value: 250, min: 1, max: 1000 },
-            position: { value: [0, 0, 0], step: 1 },
-          })}
-        />
+        <Planet name="planet" radius={250} position={[0, 0, 0]} />
+        <Planet name="planet2" radius={250} position={[800, 400, 0]} />
         <axesHelper scale={[100, 100, 100]} />
       </CameraSystem>
     </>

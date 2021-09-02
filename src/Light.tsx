@@ -6,7 +6,7 @@ import { useControls } from "./lib/useControls";
 
 export function Light() {
   let ref = useRef();
-  useHelper(ref, SpotLightHelper);
+  // useHelper(ref, SpotLightHelper);
   return (
     <>
       <ambientLight

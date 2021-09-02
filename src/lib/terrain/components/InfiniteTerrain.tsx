@@ -13,6 +13,7 @@ import { utils } from "../utils";
 import { useColorGenerator, useHeightGenerator } from "./Planet";
 import { TerrainMesh } from "./TerrainMesh";
 import { ObjectPoolImpl, ObjectPool } from "./ObjectPool";
+import { COLORS } from "../lib/color-generator";
 
 function getCellIndex(p: THREE.Vector3, chunkSize: number) {
   const xp = p.x + chunkSize * 0.5;
@@ -27,8 +28,7 @@ export function InfiniteTerrain({
   chunkSize = 200,
   resolution = 64,
 }) {
-  const heightGenerator = useHeightGenerator();
-  const colorGenerator = useColorGenerator();
+  const { heightGenerator, colorGenerator } = useTerrainGenerators();
 
   const [chunks, setChunks] = React.useState(
     () =>
@@ -113,12 +113,8 @@ function TerrainMeshPool({ children }: React.PropsWithChildren<{}>) {
   );
 }
 
-export function QuadTreeTerrain({
-  // maxViewDistance = 400,
-  // chunkSize = 200,
-  resolution = 64,
-}) {
-  const heightGenerator = useHeightGenerator({
+function useTerrainGenerators() {
+  const heightGenerator = useHeightGenerator("terrain", {
     octaves: 10,
     persistence: 0.5,
     lacunarity: 1.6,
@@ -129,16 +125,36 @@ export function QuadTreeTerrain({
     seed: 1,
   });
 
-  const colorGenerator = useColorGenerator({
-    octaves: 2,
-    persistence: 0.5,
-    lacunarity: 2.0,
-    scale: 2048.0,
-    noiseType: "simplex",
-    seed: 2,
-    exponentiation: 1,
-    height: 1.0,
+  const colorGenerator = useColorGenerator("terrain", {
+    gradient: [
+      [COLORS.DEEP_OCEAN, 0],
+      [COLORS.SHALLOW_OCEAN, 0.05],
+      [COLORS.FOREST_TROPICAL, 0.1],
+      ["#6f5231", 0.2],
+      ["#6f5231", 0.35],
+      [COLORS.SNOW, 0.4],
+    ],
+    biomeNoise: {
+      octaves: 2,
+      persistence: 0.5,
+      lacunarity: 2.0,
+      scale: 2048.0,
+      noiseType: "simplex",
+      seed: 2,
+      exponentiation: 1,
+      height: 1.0,
+    },
   });
+
+  return { heightGenerator, colorGenerator };
+}
+
+export function QuadTreeTerrain({
+  // maxViewDistance = 400,
+  // chunkSize = 200,
+  resolution = 64,
+}) {
+  const { heightGenerator, colorGenerator } = useTerrainGenerators();
 
   interface TerrainChunkParams {
     offset: [number, number, number];
