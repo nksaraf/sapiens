@@ -11,9 +11,10 @@ import { Camera } from "./components/Camera";
 import { Light } from "./Light";
 import { Keyboard, useKeyboardInput } from "./Keyboard";
 import TerrainDemo from "@/terrain/components/Demo";
+
 import React from "react";
 import { World } from "@/ecs/components/World";
-
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 // function UI() {
 //   const inCheckmate = useAtomValue($.inCheckmate);
 //   return (
@@ -42,10 +43,14 @@ export function App() {
         <Toaster />
         <Leva collapsed={true} />
         <Canvas shadows>
-          <World />
+          {/* <World /> */}
           <color attach="background" args={["black"]} />
-          <TerrainDemo />
           <Keyboard />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<TerrainDemo />} />
+            </Routes>
+          </BrowserRouter>
           <Light />
           <Stats />
         </Canvas>
