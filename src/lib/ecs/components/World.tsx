@@ -32,7 +32,7 @@ import { createStore } from "@/store";
 export function World({
   systems = [],
   afterRenderSystems = [],
-}: React.ComponentProps<typeof Canvas> & {
+}: {
   systems?: any[];
   afterRenderSystems?: any[];
 }) {

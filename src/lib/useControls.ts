@@ -41,7 +41,7 @@ export function useControls<
   return useLevaControls(
     folderName,
     schema,
-    { collapsed: true, ...settings },
+    { collapsed: true ,...settings },
     deps
   );
 }

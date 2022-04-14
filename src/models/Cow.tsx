@@ -231,40 +231,47 @@ const CowModel = React.forwardRef(function CowModel(
               geometry={nodes.Cube.geometry}
               material={materials.Main}
               skeleton={nodes.Cube.skeleton}
+              castShadow
             />
             <skinnedMesh
               name="Cube_1"
               geometry={nodes.Cube_1.geometry}
               material={materials.Main_Light}
+              castShadow
               skeleton={nodes.Cube_1.skeleton}
             />
             <skinnedMesh
               name="Cube_2"
               geometry={nodes.Cube_2.geometry}
               material={materials.Hooves}
+              castShadow
               skeleton={nodes.Cube_2.skeleton}
             />
             <skinnedMesh
               name="Cube_3"
               geometry={nodes.Cube_3.geometry}
+              castShadow
               material={materials.Muzzle}
               skeleton={nodes.Cube_3.skeleton}
             />
             <skinnedMesh
               name="Cube_4"
               geometry={nodes.Cube_4.geometry}
+              castShadow
               material={materials.Eye_Black}
               skeleton={nodes.Cube_4.skeleton}
             />
             <skinnedMesh
               name="Cube_5"
               geometry={nodes.Cube_5.geometry}
+              castShadow
               material={materials.Eye_White}
               skeleton={nodes.Cube_5.skeleton}
             />
             <skinnedMesh
               name="Cube_6"
               geometry={nodes.Cube_6.geometry}
+              castShadow
               material={materials.Horns}
               skeleton={nodes.Cube_6.skeleton}
             />

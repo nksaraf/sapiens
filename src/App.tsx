@@ -1,6 +1,14 @@
 import { Html, OrbitControls, Sky, Stats } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { Leva, useControls } from "leva";
+import {
+  Leva,
+  LevaPanel,
+  levaStore,
+  LevaStoreProvider,
+  useControls,
+  useStoreContext,
+  useCreateStore,
+} from "leva";
 import { Toaster } from "react-hot-toast";
 import { atom, Provider } from "jotai";
 import { $ } from "src/atoms";
@@ -10,11 +18,15 @@ import { useAtomValue } from "jotai/utils";
 import { Camera } from "./components/Camera";
 import { Light } from "./Light";
 import { Keyboard, useKeyboardInput } from "./Keyboard";
-import TerrainDemo from "@/terrain/components/Demo";
 
-import React from "react";
+import React, { Suspense, useEffect } from "react";
 import { World } from "@/ecs/components/World";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { createEffect } from "react-solid-state";
+import { Character } from "./models/Cow";
+import { CameraSystem } from "./Camera";
+
+const TerrainDemo = React.lazy(() => import("@/terrain/components/Demo"));
 // function UI() {
 //   const inCheckmate = useAtomValue($.inCheckmate);
 //   return (
@@ -36,26 +48,67 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 //   );
 // }
 
+function StoreDebugger() {
+  // const val = levaStore.useStore();
+  // console.log(JSON.stringify(val, null, 2));
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     localStorage.setItem("leva-store-123", JSON.stringify(val));
+  //   }, 1000);
+  //   return () => clearInterval(interval);
+  // }, [JSON.stringify(val)]);
+  return null;
+}
 export function App() {
   return (
     <Provider>
-      <div className="h-screen w-screen">
-        <Toaster />
-        <Leva collapsed={true} />
-        <Canvas shadows>
-          {/* <World /> */}
-          <color attach="background" args={["black"]} />
-          <Keyboard />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<TerrainDemo />} />
-            </Routes>
-          </BrowserRouter>
-          <Light />
-          <Stats />
-        </Canvas>
-        <Debugger />
-      </div>
+      <Suspense fallback={<div>Loading</div>}>
+        <div className="h-screen w-screen">
+          <Toaster />
+          <StoreDebugger />
+          <Canvas shadows>
+            <World />
+            <color attach="background" args={["white"]} />
+            <Keyboard />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<TerrainDemo />} />
+                <Route
+                  path="/other"
+                  element={
+                    <CameraSystem>
+                      <Camera
+                        name="player camera"
+                        camera="perspective"
+                        position={[-40, 20, 20]}
+                        far={10000}
+                        onUpdate={(c: THREE.PerspectiveCamera) =>
+                          c.lookAt(0, 0, 0)
+                        }
+                        near={0.1}
+                        makeDefault
+                      />
+                      <mesh
+                        rotation={[-Math.PI / 2, 0, 0]}
+                        scale={[100, 100, 100]}
+                        receiveShadow
+                      >
+                        <planeBufferGeometry />
+                        <meshStandardMaterial />
+                      </mesh>
+                      <Character />
+                      <OrbitControls makeDefault />
+                    </CameraSystem>
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+            <Light />
+            <Stats />
+          </Canvas>
+          <Debugger />
+        </div>
+      </Suspense>
     </Provider>
   );
 }

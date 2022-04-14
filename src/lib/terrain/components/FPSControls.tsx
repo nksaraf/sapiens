@@ -47,13 +47,13 @@ export const PointerLockControls = React.forwardRef<
     };
   }, [onChange, onLock, onUnlock, controls, invalidate]);
 
-  React.useEffect(() => {
-    const handler = () => controls?.lock();
-    const element = selector ? document.querySelector(selector) : document;
-    element && element.addEventListener("click", handler);
-    return () =>
-      element ? element.removeEventListener("click", handler) : undefined;
-  }, [controls, selector]);
+  // React.useEffect(() => {
+  //   const handler = () => controls?.lock();
+  //   const element = selector ? document.querySelector(selector) : document;
+  //   element && element.addEventListener("click", handler);
+  //   return () =>
+  //     element ? element.removeEventListener("click", handler) : undefined;
+  // }, [controls, selector]);
 
   return controls ? (
     <primitive ref={ref} dispose={undefined} object={controls} {...rest} />
